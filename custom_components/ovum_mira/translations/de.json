@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verbindung",
+        "description": "IP-Adresse und Port der Ovum MIRA Wärmepumpe eingeben.",
+        "data": {
+          "host": "IP-Adresse",
+          "port": "Modbus TCP Port",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      },
+      "license": {
+        "title": "Lizenzlevel",
+        "description": "Wähle den Modbus-Zugangsevel, den du bei Ovum erworben hast. Level 1 (Start Values) ist kostenlos. Level 2 (Plus Values) und Level 3 (BMS Values) sind kostenpflichtig.",
+        "data": {
+          "level": "Modbus-Zugangsevel"
+        }
+      },
+      "ww_type": {
+        "title": "Warmwasserversorgung",
+        "description": "Wähle 'Interne Frischwasserstation', wenn deine MIRA eine eingebaute Frischwasserstation hat. Bei externem Speicher diese Option deaktiviert lassen.",
+        "data": {
+          "ww_internal": "Interne Frischwasserstation"
+        }
+      },
+      "hk_count": {
+        "title": "Heizkreise und WPM-Module",
+        "description": "Anzahl der Heizkreise (HK) und WPM-Einheiten eingeben. Level 1 unterstützt HK1–2, Level 2+ HK3–4.",
+        "data": {
+          "num_hk": "Anzahl Heizkreise (1-4)",
+          "num_wpm": "Anzahl WPM-Module (1-8)"
+        }
+      },
+      "cooling": {
+        "title": "Kühlbetrieb",
+        "description": "Aktivieren wenn die MIRA für aktives Kühlen konfiguriert ist.",
+        "data": {
+          "cooling": "Aktiver Kühlbetrieb aktiviert"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur MIRA nicht möglich. IP-Adresse und Port prüfen.",
+      "login_failed": "Verbindung hergestellt, aber Modbus-Login fehlgeschlagen. Modbus-Kabel und Lizenzlevel prüfen."
+    },
+    "abort": {
+      "already_configured": "Diese MIRA ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ovum MIRA Optionen",
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  }
+}

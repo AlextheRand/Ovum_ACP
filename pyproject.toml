@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "ovum-mira-ha"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "ANN", "B"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.coverage.run]
+source = ["custom_components/ovum_mira"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 80

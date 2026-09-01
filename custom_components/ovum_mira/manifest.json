@@ -1,0 +1,11 @@
+{
+  "domain": "ovum_mira",
+  "name": "Ovum MIRA Heat Pump",
+  "version": "0.1.0",
+  "requirements": ["pymodbus==3.8.*"],
+  "iot_class": "local_polling",
+  "config_flow": true,
+  "codeowners": ["@alexander"],
+  "documentation": "https://github.com/alexander/ovum-mira-ha",
+  "issue_tracker": "https://github.com/alexander/ovum-mira-ha/issues"
+}

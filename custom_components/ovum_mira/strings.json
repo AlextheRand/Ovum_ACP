@@ -1,0 +1,116 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connection",
+        "description": "Enter the IP address and port of your Ovum MIRA heat pump.",
+        "data": {
+          "host": "IP Address",
+          "port": "Modbus TCP Port",
+          "scan_interval": "Poll interval (seconds)"
+        }
+      },
+      "license": {
+        "title": "License Level",
+        "description": "Select the Modbus access level you have purchased from Ovum.",
+        "data": {
+          "level": "Level"
+        }
+      },
+      "ww_type": {
+        "title": "Domestic Hot Water",
+        "description": "Does your MIRA have an internal fresh water station (Frischwasserstation)?",
+        "data": {
+          "ww_internal": "Internal fresh water station"
+        }
+      },
+      "hk_count": {
+        "title": "Heating Circuits",
+        "description": "How many heating circuits (HK) and WPM modules are installed?",
+        "data": {
+          "num_hk": "Number of heating circuits",
+          "num_wpm": "Number of WPM modules"
+        }
+      },
+      "cooling": {
+        "title": "Cooling",
+        "description": "Is active cooling configured on your MIRA?",
+        "data": {
+          "cooling": "Cooling enabled"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to MIRA. Check IP and port.",
+      "login_failed": "Connected but login handshake (FC16) failed. Check Modbus access level."
+    },
+    "abort": {
+      "already_configured": "This MIRA is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "scan_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ww_soll": {"name": "WW Setpoint"},
+      "ww_soll_pv": {"name": "WW PV Setpoint"},
+      "ww_desiredtemp": {"name": "WW Desired Temp (active)"},
+      "ww_temp_oben": {"name": "WW Temperature Top"},
+      "ww_temp_unten": {"name": "WW Temperature Bottom"},
+      "ww_anfstatus": {"name": "WW Demand Status"},
+      "ww_fwsstsstatus": {"name": "Fresh Water Station Status"},
+      "ww_zirkt": {"name": "Circulation Temperature"},
+      "fws_soll": {"name": "Fresh Water Station Setpoint"},
+      "hpuf_soll_pv": {"name": "Buffer PV Setpoint"},
+      "hpuf_solltemp": {"name": "Buffer Setpoint (active)"},
+      "puffer_temp_oben": {"name": "Buffer Temperature Top"},
+      "puffer_temp_unten": {"name": "Buffer Temperature Bottom"},
+      "hpuf_ladestatus": {"name": "Buffer Charge Status"},
+      "hpuf_status": {"name": "Buffer Status"},
+      "kpuf_puut": {"name": "Cooling Buffer Temperature"},
+      "kpuf_solltemp": {"name": "Cooling Buffer Setpoint"},
+      "kpuf_ladestatus": {"name": "Cooling Buffer Status"},
+      "ems_pvstatus": {"name": "EMS PV Status"},
+      "aussentemperatur": {"name": "Outdoor Temperature"},
+      "sys_snrkey": {"name": "Serial Number"},
+      "hsm_lk_a_mode": {"name": "Charging Circuit A"},
+      "hsm_lk_b_mode": {"name": "Charging Circuit B"},
+      "hsm_lk_c_mode": {"name": "Charging Circuit C"},
+      "hsm_lk_d_mode": {"name": "Charging Circuit D"},
+      "hsm_pvstatus_bms": {"name": "HSM PV Status (internal)"},
+      "hsm_error_status": {"name": "HSM Error Status"},
+      "hsm_errorcode_1": {"name": "HSM Error Code 1"},
+      "hsm_errorcode_2": {"name": "HSM Error Code 2"},
+      "hsm_warningcode_1": {"name": "HSM Warning Code 1"},
+      "hsm_warningcode_2": {"name": "HSM Warning Code 2"},
+      "has_fault": {"name": "Fault Active"},
+      "wpm_running": {"name": "WPM Running"}
+    },
+    "select": {
+      "ems_pvstatus": {"name": "EMS PV Status"},
+      "ww_switch_on": {"name": "WW Main Switch"},
+      "ww_urlaub": {"name": "WW Holiday Mode"}
+    },
+    "number": {
+      "ww_soll": {"name": "WW Setpoint"},
+      "ww_soll_pv": {"name": "WW PV Setpoint"},
+      "hpuf_soll_pv": {"name": "Buffer PV Setpoint"}
+    },
+    "binary_sensor": {
+      "ww_zirkpump": {"name": "Circulation Pump"},
+      "has_fault": {"name": "Fault Active"},
+      "wpm_running": {"name": "Compressor Running"},
+      "biv_kaskwwanf": {"name": "Cascade WW Demand"},
+      "biv_kaskhzanf": {"name": "Cascade Heating Demand"},
+      "biv_kaskkueanf": {"name": "Cascade Cooling Demand"}
+    }
+  }
+}

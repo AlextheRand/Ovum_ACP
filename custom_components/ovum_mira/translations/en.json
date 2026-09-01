@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connection",
+        "description": "Enter the IP address and port of your Ovum MIRA heat pump.",
+        "data": {
+          "host": "IP Address",
+          "port": "Modbus TCP Port",
+          "scan_interval": "Poll interval (seconds)"
+        }
+      },
+      "license": {
+        "title": "License Level",
+        "description": "Select the Modbus access level you have purchased from Ovum. Level 1 (Start Values) is free. Level 2 (Plus Values) and Level 3 (BMS Values) require a paid license from Ovum.",
+        "data": {
+          "level": "Modbus Access Level"
+        }
+      },
+      "ww_type": {
+        "title": "Domestic Hot Water",
+        "description": "Select 'Internal fresh water station' if your MIRA has a built-in Frischwasserstation. Most external tank installations should leave this unchecked.",
+        "data": {
+          "ww_internal": "Internal fresh water station (Frischwasserstation)"
+        }
+      },
+      "hk_count": {
+        "title": "Heating Circuits & WPM Modules",
+        "description": "Enter the number of heating circuits (HK) and WPM (heat pump module) units installed. Level 1 supports HK1-2; Level 2+ supports HK3-4.",
+        "data": {
+          "num_hk": "Number of heating circuits (1-4)",
+          "num_wpm": "Number of WPM modules (1-8)"
+        }
+      },
+      "cooling": {
+        "title": "Cooling",
+        "description": "Enable if your MIRA is configured for active cooling.",
+        "data": {
+          "cooling": "Active cooling enabled"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to MIRA. Check IP address and port.",
+      "login_failed": "Connected but Modbus login failed. Verify your Modbus cable and access level."
+    },
+    "abort": {
+      "already_configured": "This MIRA device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ovum MIRA Options",
+        "data": {
+          "scan_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  }
+}
