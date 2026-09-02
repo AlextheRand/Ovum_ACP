@@ -23,6 +23,7 @@ except ImportError as exc:
     ) from exc
 
 from .const import (
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     FC,
     DataType,
@@ -84,22 +85,24 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Manages Modbus TCP connection, login, reads and writes to the MIRA."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        self._host: str = entry.data[CONF_HOST]
-        self._port: int = entry.data[CONF_PORT]
-        self._level = Level(entry.data[CONF_LEVEL])
-        self._num_hk: int = entry.data[CONF_NUM_HK]
-        self._num_wpm: int = entry.data[CONF_NUM_WPM]
-        self._ww_internal: bool = entry.data[CONF_WW_INTERNAL]
-        self._cooling: bool = entry.data[CONF_COOLING]
+        def _get(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
 
-        # Login code: s32 big-endian split into two u16 words
-        login_code: int = entry.data.get(CONF_LOGIN_CODE, 1)
+        self._host: str = _get(CONF_HOST, "")
+        self._port: int = _get(CONF_PORT, 502)
+        self._level = Level(_get(CONF_LEVEL, Level.L1))
+        self._num_hk: int = _get(CONF_NUM_HK, 1)
+        self._num_wpm: int = _get(CONF_NUM_WPM, 1)
+        self._ww_internal: bool = _get(CONF_WW_INTERNAL, False)
+        self._cooling: bool = _get(CONF_COOLING, False)
+
+        login_code: int = _get(CONF_LOGIN_CODE, 1)
         self._login_payload: list[int] = [
             (login_code >> 16) & 0xFFFF,
             login_code & 0xFFFF,
         ]
 
-        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, entry.data[CONF_SCAN_INTERVAL])
+        scan_interval = _get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,

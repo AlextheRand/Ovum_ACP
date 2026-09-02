@@ -62,11 +62,58 @@
   "options": {
     "step": {
       "init": {
-        "title": "Ovum MIRA Options",
+        "title": "Connection",
+        "description": "Change connection settings. A connection test is performed before saving.",
         "data": {
+          "host": "IP Address",
+          "port": "Modbus TCP Port",
+          "login_code": "Modbus Login Code",
           "scan_interval": "Poll interval (seconds)"
         }
+      },
+      "license": {
+        "title": "License Level",
+        "description": "Select the Modbus access level you have purchased from Ovum.",
+        "data": {
+          "level": "Modbus Access Level"
+        }
+      },
+      "ww_type": {
+        "title": "Domestic Hot Water",
+        "description": "Internal fresh water station or external tank?",
+        "data": {
+          "ww_internal": "Internal fresh water station (Frischwasserstation)"
+        }
+      },
+      "hk_count": {
+        "title": "Heating Circuits & WPM Modules",
+        "description": "Number of heating circuits and WPM modules installed.",
+        "data": {
+          "num_hk": "Number of heating circuits (1–4)",
+          "num_wpm": "Number of WPM modules (1–8)"
+        }
+      },
+      "hk_types": {
+        "title": "Heating Circuit Functions",
+        "description": "Select the function of each heating circuit.",
+        "data": {
+          "hk1_type": "Heating Circuit 1",
+          "hk2_type": "Heating Circuit 2",
+          "hk3_type": "Heating Circuit 3",
+          "hk4_type": "Heating Circuit 4"
+        }
+      },
+      "cooling": {
+        "title": "Cooling",
+        "description": "Enable if your MIRA is configured for active cooling.",
+        "data": {
+          "cooling": "Active cooling enabled"
+        }
       }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to MIRA. Check IP address and port.",
+      "login_failed": "Connected but Modbus login failed. Check your access level."
     }
   }
 }

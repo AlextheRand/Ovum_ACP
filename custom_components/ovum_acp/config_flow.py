@@ -204,23 +204,137 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class OvumMiraOptionsFlow(OptionsFlow):
-    """Options flow: only scan_interval is user-changeable after setup."""
+    """Options flow: all parameters changeable; triggers reload on save."""
+
+    _data: dict[str, Any]
+
+    def _cur(self, key: str, default: Any) -> Any:
+        return self.config_entry.options.get(
+            key, self.config_entry.data.get(key, default)
+        )
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Step 1: Connection + scan interval."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            error = await _test_connection(
+                user_input[CONF_HOST], user_input[CONF_PORT], user_input[CONF_LOGIN_CODE]
+            )
+            if error:
+                errors["base"] = error
+            else:
+                self._data = {**user_input}
+                return await self.async_step_license()
 
-        current = self.config_entry.options.get(
-            CONF_SCAN_INTERVAL,
-            self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-        )
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Required(CONF_SCAN_INTERVAL, default=current): vol.All(
+                vol.Required(CONF_HOST, default=self._cur(CONF_HOST, DEFAULT_HOST)): str,
+                vol.Required(CONF_PORT, default=self._cur(CONF_PORT, DEFAULT_PORT)): int,
+                vol.Required(CONF_LOGIN_CODE, default=self._cur(CONF_LOGIN_CODE, DEFAULT_LOGIN_CODE)): vol.All(
+                    int, vol.Range(min=1, max=2147483647)
+                ),
+                vol.Required(CONF_SCAN_INTERVAL, default=self._cur(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(
                     int, vol.Range(min=10, max=300)
                 ),
+            }),
+            errors=errors,
+        )
+
+    async def async_step_license(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 2: License level."""
+        if user_input is not None:
+            self._data[CONF_LEVEL] = int(user_input[CONF_LEVEL])
+            return await self.async_step_ww_type()
+
+        return self.async_show_form(
+            step_id="license",
+            data_schema=vol.Schema({
+                vol.Required(CONF_LEVEL, default=self._cur(CONF_LEVEL, Level.L1)): vol.In({
+                    Level.L1: "Level 1 — Start Values (free)",
+                    Level.L2: "Level 2 — Plus Values (paid)",
+                    Level.L3: "Level 3 — BMS Values (paid)",
+                }),
+            }),
+        )
+
+    async def async_step_ww_type(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 3: WW type."""
+        if user_input is not None:
+            self._data[CONF_WW_INTERNAL] = user_input[CONF_WW_INTERNAL]
+            return await self.async_step_hk_count()
+
+        return self.async_show_form(
+            step_id="ww_type",
+            data_schema=vol.Schema({
+                vol.Required(CONF_WW_INTERNAL, default=self._cur(CONF_WW_INTERNAL, False)): bool,
+            }),
+        )
+
+    async def async_step_hk_count(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 4: HK count + WPM count."""
+        if user_input is not None:
+            self._data[CONF_NUM_HK] = user_input[CONF_NUM_HK]
+            self._data[CONF_NUM_WPM] = user_input[CONF_NUM_WPM]
+            return await self.async_step_hk_types()
+
+        level = self._data.get(CONF_LEVEL, self._cur(CONF_LEVEL, Level.L1))
+        max_hk = 4 if level >= Level.L2 else 2
+
+        return self.async_show_form(
+            step_id="hk_count",
+            data_schema=vol.Schema({
+                vol.Required(CONF_NUM_HK, default=self._cur(CONF_NUM_HK, 2)): vol.All(
+                    int, vol.Range(min=1, max=max_hk)
+                ),
+                vol.Required(CONF_NUM_WPM, default=self._cur(CONF_NUM_WPM, 1)): vol.All(
+                    int, vol.Range(min=1, max=8)
+                ),
+            }),
+        )
+
+    async def async_step_hk_types(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 5: HK type per circuit."""
+        num_hk: int = self._data[CONF_NUM_HK]
+        cur_types: dict[str, int] = self._cur(CONF_HK_TYPES, {})
+
+        if user_input is not None:
+            self._data[CONF_HK_TYPES] = {
+                f"hk{n}": int(user_input[f"hk{n}_type"]) for n in range(1, num_hk + 1)
+            }
+            return await self.async_step_cooling()
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            default_type = cur_types.get(f"hk{n}", 1)
+            schema_dict[vol.Required(f"hk{n}_type", default=default_type)] = vol.In(HK_TYPE_LABELS)
+
+        return self.async_show_form(
+            step_id="hk_types",
+            data_schema=vol.Schema(schema_dict),
+        )
+
+    async def async_step_cooling(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 6: Cooling — save and trigger reload."""
+        if user_input is not None:
+            self._data[CONF_COOLING] = user_input[CONF_COOLING]
+            return self.async_create_entry(data=self._data)
+
+        return self.async_show_form(
+            step_id="cooling",
+            data_schema=vol.Schema({
+                vol.Required(CONF_COOLING, default=self._cur(CONF_COOLING, False)): bool,
             }),
         )

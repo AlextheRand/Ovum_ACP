@@ -62,11 +62,58 @@
   "options": {
     "step": {
       "init": {
-        "title": "Ovum MIRA Optionen",
+        "title": "Verbindung",
+        "description": "Verbindungseinstellungen ändern. Vor dem Speichern wird ein Verbindungstest durchgeführt.",
         "data": {
+          "host": "IP-Adresse",
+          "port": "Modbus TCP Port",
+          "login_code": "Modbus Login-Code",
           "scan_interval": "Abfrageintervall (Sekunden)"
         }
+      },
+      "license": {
+        "title": "Lizenzlevel",
+        "description": "Modbus-Zugangslevel auswählen.",
+        "data": {
+          "level": "Modbus-Zugangslevel"
+        }
+      },
+      "ww_type": {
+        "title": "Warmwasserversorgung",
+        "description": "Interne Frischwasserstation oder externer Speicher?",
+        "data": {
+          "ww_internal": "Interne Frischwasserstation"
+        }
+      },
+      "hk_count": {
+        "title": "Heizkreise und WPM-Module",
+        "description": "Anzahl der Heizkreise und WPM-Einheiten.",
+        "data": {
+          "num_hk": "Anzahl Heizkreise (1–4)",
+          "num_wpm": "Anzahl WPM-Module (1–8)"
+        }
+      },
+      "hk_types": {
+        "title": "Heizkreis-Funktionen",
+        "description": "Funktion jedes Heizkreises festlegen.",
+        "data": {
+          "hk1_type": "Heizkreis 1",
+          "hk2_type": "Heizkreis 2",
+          "hk3_type": "Heizkreis 3",
+          "hk4_type": "Heizkreis 4"
+        }
+      },
+      "cooling": {
+        "title": "Kühlbetrieb",
+        "description": "Aktivieren wenn die MIRA für aktives Kühlen konfiguriert ist.",
+        "data": {
+          "cooling": "Aktiver Kühlbetrieb aktiviert"
+        }
       }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur MIRA nicht möglich. IP-Adresse und Port prüfen.",
+      "login_failed": "Verbindung hergestellt, aber Modbus-Login fehlgeschlagen. Lizenzlevel prüfen."
     }
   }
 }
