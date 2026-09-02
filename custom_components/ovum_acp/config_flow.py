@@ -203,7 +203,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Reconfigure Step 1: Connection."""
         errors: dict[str, str] = {}
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
@@ -231,7 +231,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure Step 2: Level."""
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
@@ -255,7 +255,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure Step 3: WW type."""
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
@@ -275,7 +275,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure Step 4: HK count + WPM count."""
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
@@ -304,7 +304,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure Step 5: HK types."""
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
         num_hk: int = self._data[CONF_NUM_HK]
         cur_types: dict[str, int] = entry.options.get(
             CONF_HK_TYPES, entry.data.get(CONF_HK_TYPES, {})
@@ -329,7 +329,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Reconfigure Step 6: Cooling — update entry data and reload."""
-        entry = self.config_entry
+        entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
             return entry.options.get(key, entry.data.get(key, default))
@@ -338,7 +338,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data[CONF_COOLING] = user_input[CONF_COOLING]
             return self.async_update_reload_and_abort(
                 entry,
-                data={**entry.data, **self._data},
+                data_updates=self._data,
                 reason="reconfigure_successful",
             )
 
