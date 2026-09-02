@@ -25,6 +25,7 @@ from .const import (
 )
 from .coordinator import (
     CONF_COOLING,
+    CONF_HK_COOLING,
     CONF_HK_TYPES,
     CONF_HOST,
     CONF_LEVEL,
@@ -181,6 +182,9 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Step 5: Cooling configuration."""
         if user_input is not None:
             self._data[CONF_COOLING] = user_input[CONF_COOLING]
+            if user_input[CONF_COOLING]:
+                return await self.async_step_hk_cooling_capable()
+            self._data[CONF_HK_COOLING] = {}
             await self.async_set_unique_id(
                 f"{self._data[CONF_HOST]}:{self._data[CONF_PORT]}"
             )
@@ -195,6 +199,35 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_COOLING, default=False): bool,
             }),
+        )
+
+    async def async_step_hk_cooling_capable(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 6 (if cooling=True): Which HKs participate in cooling?"""
+        num_hk: int = self._data[CONF_NUM_HK]
+
+        if user_input is not None:
+            self._data[CONF_HK_COOLING] = {
+                f"hk{n}": user_input.get(f"hk{n}_cooling", False)
+                for n in range(1, num_hk + 1)
+            }
+            await self.async_set_unique_id(
+                f"{self._data[CONF_HOST]}:{self._data[CONF_PORT]}"
+            )
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(
+                title=f"Ovum MIRA ({self._data[CONF_HOST]})",
+                data=self._data,
+            )
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            schema_dict[vol.Required(f"hk{n}_cooling", default=True)] = bool
+
+        return self.async_show_form(
+            step_id="hk_cooling_capable",
+            data_schema=vol.Schema(schema_dict),
         )
 
     # ── Reconfigure flow (HA 2025+: ⋮ → "Neu konfigurieren") ──────────
@@ -328,7 +361,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure_cooling(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Reconfigure Step 6: Cooling — update entry data and reload."""
+        """Reconfigure Step 6: Cooling."""
         entry = self._get_reconfigure_entry()
 
         def _cur(key: str, default: Any) -> Any:
@@ -336,6 +369,9 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._data[CONF_COOLING] = user_input[CONF_COOLING]
+            if user_input[CONF_COOLING]:
+                return await self.async_step_reconfigure_hk_cooling_capable()
+            self._data[CONF_HK_COOLING] = {}
             return self.async_update_reload_and_abort(
                 entry,
                 data_updates=self._data,
@@ -347,6 +383,37 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_COOLING, default=_cur(CONF_COOLING, False)): bool,
             }),
+        )
+
+    async def async_step_reconfigure_hk_cooling_capable(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 7: Which HKs participate in cooling?"""
+        entry = self._get_reconfigure_entry()
+        num_hk: int = self._data[CONF_NUM_HK]
+        cur_hk_cooling: dict[str, bool] = entry.options.get(
+            CONF_HK_COOLING, entry.data.get(CONF_HK_COOLING, {})
+        )
+
+        if user_input is not None:
+            self._data[CONF_HK_COOLING] = {
+                f"hk{n}": user_input.get(f"hk{n}_cooling", False)
+                for n in range(1, num_hk + 1)
+            }
+            return self.async_update_reload_and_abort(
+                entry,
+                data_updates=self._data,
+                reason="reconfigure_successful",
+            )
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            default_val = cur_hk_cooling.get(f"hk{n}", True)
+            schema_dict[vol.Required(f"hk{n}_cooling", default=default_val)] = bool
+
+        return self.async_show_form(
+            step_id="reconfigure_hk_cooling_capable",
+            data_schema=vol.Schema(schema_dict),
         )
 
     @staticmethod
@@ -471,9 +538,12 @@ class OvumMiraOptionsFlow(OptionsFlow):
     async def async_step_cooling(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Step 6: Cooling — save and trigger reload."""
+        """Step 6: Cooling."""
         if user_input is not None:
             self._data[CONF_COOLING] = user_input[CONF_COOLING]
+            if user_input[CONF_COOLING]:
+                return await self.async_step_hk_cooling_capable()
+            self._data[CONF_HK_COOLING] = {}
             return self.async_create_entry(data=self._data)
 
         return self.async_show_form(
@@ -481,4 +551,28 @@ class OvumMiraOptionsFlow(OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required(CONF_COOLING, default=self._cur(CONF_COOLING, False)): bool,
             }),
+        )
+
+    async def async_step_hk_cooling_capable(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 7: Which HKs participate in cooling?"""
+        num_hk: int = self._data[CONF_NUM_HK]
+        cur_hk_cooling: dict[str, bool] = self._cur(CONF_HK_COOLING, {})
+
+        if user_input is not None:
+            self._data[CONF_HK_COOLING] = {
+                f"hk{n}": user_input.get(f"hk{n}_cooling", False)
+                for n in range(1, num_hk + 1)
+            }
+            return self.async_create_entry(data=self._data)
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            default_val = cur_hk_cooling.get(f"hk{n}", True)
+            schema_dict[vol.Required(f"hk{n}_cooling", default=default_val)] = bool
+
+        return self.async_show_form(
+            step_id="hk_cooling_capable",
+            data_schema=vol.Schema(schema_dict),
         )

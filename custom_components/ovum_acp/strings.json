@@ -49,6 +49,16 @@
         "data": {
           "cooling": "Cooling enabled"
         }
+      },
+      "hk_cooling_capable": {
+        "title": "Heating Circuits with Cooling",
+        "description": "Select which heating circuits can be used for cooling. Unselected circuits are heating-only.",
+        "data": {
+          "hk1_cooling": "Heating Circuit 1 — cooling capable",
+          "hk2_cooling": "Heating Circuit 2 — cooling capable",
+          "hk3_cooling": "Heating Circuit 3 — cooling capable",
+          "hk4_cooling": "Heating Circuit 4 — cooling capable"
+        }
       }
     },
     "error": {
@@ -98,6 +108,16 @@
       "reconfigure_cooling": {
         "title": "Cooling",
         "data": { "cooling": "Active cooling enabled" }
+      },
+      "reconfigure_hk_cooling_capable": {
+        "title": "Heating Circuits with Cooling",
+        "description": "Select which heating circuits can be used for cooling.",
+        "data": {
+          "hk1_cooling": "Heating Circuit 1 — cooling capable",
+          "hk2_cooling": "Heating Circuit 2 — cooling capable",
+          "hk3_cooling": "Heating Circuit 3 — cooling capable",
+          "hk4_cooling": "Heating Circuit 4 — cooling capable"
+        }
       }
     },
     "abort": {
@@ -153,6 +173,16 @@
         "description": "Is active cooling configured on your MIRA?",
         "data": {
           "cooling": "Cooling enabled"
+        }
+      },
+      "hk_cooling_capable": {
+        "title": "Heating Circuits with Cooling",
+        "description": "Select which heating circuits can be used for cooling.",
+        "data": {
+          "hk1_cooling": "Heating Circuit 1 — cooling capable",
+          "hk2_cooling": "Heating Circuit 2 — cooling capable",
+          "hk3_cooling": "Heating Circuit 3 — cooling capable",
+          "hk4_cooling": "Heating Circuit 4 — cooling capable"
         }
       }
     },

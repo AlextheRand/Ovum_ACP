@@ -377,8 +377,18 @@ def build_register_list(
     num_wpm: int,
     has_ww_internal: bool,
     has_cooling: bool,
+    hk_cooling_set: set[int] | None = None,
 ) -> list[RegisterDef]:
-    """Return all applicable registers for the given configuration."""
+    """Return all applicable registers for the given configuration.
+
+    has_cooling: global flag — enables cooling buffer + cascade registers
+    hk_cooling_set: per-HK set (e.g. {1, 2, 3}) — enables HK-specific cooling
+                    registers (raumsoll_kue, fixwert_kue, …). Falls back to
+                    all HKs if has_cooling=True and set is not provided.
+    """
+    if hk_cooling_set is None:
+        hk_cooling_set = set(range(1, num_hk + 1)) if has_cooling else set()
+
     regs: list[RegisterDef] = []
 
     for reg in HSM_REGISTERS:
@@ -386,7 +396,8 @@ def build_register_list(
             continue
         if reg.requires_ww_internal and not has_ww_internal:
             continue
-        if reg.requires_cooling and not has_cooling:
+        # Global cooling registers (kpuf_*, cascade): gated by has_cooling
+        if reg.requires_cooling and reg.hk_index is None and not has_cooling:
             continue
         regs.append(reg)
 
@@ -398,7 +409,8 @@ def build_register_list(
         regs.extend(_hk_registers_l1(n))
         if level >= Level.L2:
             for reg in _hk_registers_l2_ext(n):
-                if reg.requires_cooling and not has_cooling:
+                # Per-HK cooling registers: gated by whether this HK can cool
+                if reg.requires_cooling and n not in hk_cooling_set:
                     continue
                 regs.append(reg)
 

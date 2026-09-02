@@ -49,6 +49,16 @@
         "data": {
           "cooling": "Aktiver Kühlbetrieb aktiviert"
         }
+      },
+      "hk_cooling_capable": {
+        "title": "Heizkreise für Kühlbetrieb",
+        "description": "Welche Heizkreise werden im Kühlbetrieb genutzt? Nicht ausgewählte Kreise sind reine Heizkreise.",
+        "data": {
+          "hk1_cooling": "Heizkreis 1 — Kühlbetrieb möglich",
+          "hk2_cooling": "Heizkreis 2 — Kühlbetrieb möglich",
+          "hk3_cooling": "Heizkreis 3 — Kühlbetrieb möglich",
+          "hk4_cooling": "Heizkreis 4 — Kühlbetrieb möglich"
+        }
       }
     },
     "error": {
@@ -98,6 +108,16 @@
       "reconfigure_cooling": {
         "title": "Kühlbetrieb",
         "data": { "cooling": "Aktiver Kühlbetrieb aktiviert" }
+      },
+      "reconfigure_hk_cooling_capable": {
+        "title": "Heizkreise für Kühlbetrieb",
+        "description": "Welche Heizkreise werden im Kühlbetrieb genutzt?",
+        "data": {
+          "hk1_cooling": "Heizkreis 1 — Kühlbetrieb möglich",
+          "hk2_cooling": "Heizkreis 2 — Kühlbetrieb möglich",
+          "hk3_cooling": "Heizkreis 3 — Kühlbetrieb möglich",
+          "hk4_cooling": "Heizkreis 4 — Kühlbetrieb möglich"
+        }
       }
     },
     "abort": {
@@ -153,6 +173,16 @@
         "description": "Aktivieren wenn die MIRA für aktives Kühlen konfiguriert ist.",
         "data": {
           "cooling": "Aktiver Kühlbetrieb aktiviert"
+        }
+      },
+      "hk_cooling_capable": {
+        "title": "Heizkreise für Kühlbetrieb",
+        "description": "Welche Heizkreise werden im Kühlbetrieb genutzt?",
+        "data": {
+          "hk1_cooling": "Heizkreis 1 — Kühlbetrieb möglich",
+          "hk2_cooling": "Heizkreis 2 — Kühlbetrieb möglich",
+          "hk3_cooling": "Heizkreis 3 — Kühlbetrieb möglich",
+          "hk4_cooling": "Heizkreis 4 — Kühlbetrieb möglich"
         }
       }
     },

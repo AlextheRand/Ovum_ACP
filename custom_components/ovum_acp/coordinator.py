@@ -48,6 +48,7 @@ CONF_WW_INTERNAL = "ww_internal"
 CONF_COOLING = "cooling"
 CONF_LOGIN_CODE = "login_code"
 CONF_HK_TYPES = "hk_types"
+CONF_HK_COOLING = "hk_cooling"  # dict: {"hk1": True, "hk2": True, "hk3": False}
 
 
 def _decode_value(registers: list[int], data_type: DataType) -> float | int | bool:
@@ -96,6 +97,16 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._ww_internal: bool = _get(CONF_WW_INTERNAL, False)
         self._cooling: bool = _get(CONF_COOLING, False)
 
+        # Per-HK cooling capability: dict {"hk1": True, "hk2": False, ...}
+        # Defaults: if cooling=True and no hk_cooling stored, all HKs can cool
+        hk_cooling_raw: dict[str, bool] = _get(CONF_HK_COOLING, {})
+        if hk_cooling_raw:
+            hk_cooling_set: set[int] = {
+                int(k[2:]) for k, v in hk_cooling_raw.items() if v
+            }
+        else:
+            hk_cooling_set = set(range(1, self._num_hk + 1)) if self._cooling else set()
+
         login_code: int = _get(CONF_LOGIN_CODE, 1)
         self._login_payload: list[int] = [
             (login_code >> 16) & 0xFFFF,
@@ -115,7 +126,8 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._lock = asyncio.Lock()
 
         self.registers: list[RegisterDef] = build_register_list(
-            self._level, self._num_hk, self._num_wpm, self._ww_internal, self._cooling
+            self._level, self._num_hk, self._num_wpm,
+            self._ww_internal, self._cooling, hk_cooling_set,
         )
         _LOGGER.debug("Coordinator: %d registers active", len(self.registers))
 
