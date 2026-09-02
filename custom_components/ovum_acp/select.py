@@ -83,5 +83,9 @@ class OvumMiraSelect(OvumMiraEntity, SelectEntity):
         if option not in self._attr_options:
             raise ValueError(f"Invalid option {option!r} for {self._reg.name}")
         value = self._attr_options.index(option)
-        await self.coordinator.async_write_int16(self._reg.slave, self._reg.address, value)
+        try:
+            await self.coordinator.async_write_int16(self._reg.slave, self._reg.address, value)
+        except (RuntimeError, Exception) as exc:
+            _LOGGER.error("Write failed for %s (addr=%d): %s", self._reg.name, self._reg.address, exc)
+            raise
         await self.coordinator.async_request_refresh()

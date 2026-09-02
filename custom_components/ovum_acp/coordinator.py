@@ -185,13 +185,14 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data: dict[str, Any] = {}
 
         for (slave, fc), regs in groups.items():
-            # Build contiguous batches (gap ≤ 4 registers → merge)
+            # Build contiguous batches (gap ≤ 2 registers → merge)
+            # Keep gap small: some MIRAs reject reads crossing non-existent address ranges.
             batches: list[tuple[int, int]] = []  # (start_addr, end_addr_exclusive)
             batch_start = regs[0].address
             batch_end = regs[0].address + regs[0].count
 
             for reg in regs[1:]:
-                if reg.address <= batch_end + 4:
+                if reg.address <= batch_end + 2:
                     batch_end = max(batch_end, reg.address + reg.count)
                 else:
                     batches.append((batch_start, batch_end))
