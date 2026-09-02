@@ -59,6 +59,51 @@
       "already_configured": "This MIRA device is already configured."
     }
   },
+  "reconfigure": {
+    "step": {
+      "reconfigure": {
+        "title": "Connection",
+        "description": "Update the connection settings. Changes take effect after saving.",
+        "data": {
+          "host": "IP Address",
+          "port": "Modbus TCP Port",
+          "login_code": "Modbus Login Code",
+          "scan_interval": "Poll interval (seconds)"
+        }
+      },
+      "reconfigure_license": {
+        "title": "License Level",
+        "data": { "level": "Modbus Access Level" }
+      },
+      "reconfigure_ww_type": {
+        "title": "Domestic Hot Water",
+        "data": { "ww_internal": "Internal fresh water station" }
+      },
+      "reconfigure_hk_count": {
+        "title": "Heating Circuits",
+        "data": {
+          "num_hk": "Number of heating circuits",
+          "num_wpm": "Number of WPM modules"
+        }
+      },
+      "reconfigure_hk_types": {
+        "title": "Heating Circuit Functions",
+        "data": {
+          "hk1_type": "Heating Circuit 1",
+          "hk2_type": "Heating Circuit 2",
+          "hk3_type": "Heating Circuit 3",
+          "hk4_type": "Heating Circuit 4"
+        }
+      },
+      "reconfigure_cooling": {
+        "title": "Cooling",
+        "data": { "cooling": "Active cooling enabled" }
+      }
+    },
+    "abort": {
+      "reconfigure_successful": "Configuration updated successfully."
+    }
+  },
   "options": {
     "step": {
       "init": {

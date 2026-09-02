@@ -59,6 +59,51 @@
       "already_configured": "Diese MIRA ist bereits konfiguriert."
     }
   },
+  "reconfigure": {
+    "step": {
+      "reconfigure": {
+        "title": "Verbindung",
+        "description": "Verbindungseinstellungen ändern. Änderungen werden nach dem Speichern aktiv.",
+        "data": {
+          "host": "IP-Adresse",
+          "port": "Modbus TCP Port",
+          "login_code": "Modbus Login-Code",
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      },
+      "reconfigure_license": {
+        "title": "Lizenzlevel",
+        "data": { "level": "Modbus-Zugangslevel" }
+      },
+      "reconfigure_ww_type": {
+        "title": "Warmwasserversorgung",
+        "data": { "ww_internal": "Interne Frischwasserstation" }
+      },
+      "reconfigure_hk_count": {
+        "title": "Heizkreise und WPM-Module",
+        "data": {
+          "num_hk": "Anzahl Heizkreise (1–4)",
+          "num_wpm": "Anzahl WPM-Module (1–8)"
+        }
+      },
+      "reconfigure_hk_types": {
+        "title": "Heizkreis-Funktionen",
+        "data": {
+          "hk1_type": "Heizkreis 1",
+          "hk2_type": "Heizkreis 2",
+          "hk3_type": "Heizkreis 3",
+          "hk4_type": "Heizkreis 4"
+        }
+      },
+      "reconfigure_cooling": {
+        "title": "Kühlbetrieb",
+        "data": { "cooling": "Aktiver Kühlbetrieb aktiviert" }
+      }
+    },
+    "abort": {
+      "reconfigure_successful": "Konfiguration erfolgreich aktualisiert."
+    }
+  },
   "options": {
     "step": {
       "init": {

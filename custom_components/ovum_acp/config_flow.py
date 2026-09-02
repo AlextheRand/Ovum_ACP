@@ -8,7 +8,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
@@ -194,6 +194,158 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="cooling",
             data_schema=vol.Schema({
                 vol.Required(CONF_COOLING, default=False): bool,
+            }),
+        )
+
+    # ── Reconfigure flow (HA 2025+: ⋮ → "Neu konfigurieren") ──────────
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 1: Connection."""
+        errors: dict[str, str] = {}
+        entry = self.config_entry
+
+        def _cur(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
+
+        if user_input is not None:
+            self._data = {**user_input}
+            return await self.async_step_reconfigure_license()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({
+                vol.Required(CONF_HOST, default=_cur(CONF_HOST, DEFAULT_HOST)): str,
+                vol.Required(CONF_PORT, default=_cur(CONF_PORT, DEFAULT_PORT)): int,
+                vol.Required(CONF_LOGIN_CODE, default=_cur(CONF_LOGIN_CODE, DEFAULT_LOGIN_CODE)): vol.All(
+                    int, vol.Range(min=1, max=2147483647)
+                ),
+                vol.Required(CONF_SCAN_INTERVAL, default=_cur(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)): vol.All(
+                    int, vol.Range(min=10, max=300)
+                ),
+            }),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure_license(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 2: Level."""
+        entry = self.config_entry
+
+        def _cur(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
+
+        if user_input is not None:
+            self._data[CONF_LEVEL] = int(user_input[CONF_LEVEL])
+            return await self.async_step_reconfigure_ww_type()
+
+        return self.async_show_form(
+            step_id="reconfigure_license",
+            data_schema=vol.Schema({
+                vol.Required(CONF_LEVEL, default=_cur(CONF_LEVEL, Level.L1)): vol.In({
+                    Level.L1: "Level 1 — Start Values (free)",
+                    Level.L2: "Level 2 — Plus Values (paid)",
+                    Level.L3: "Level 3 — BMS Values (paid)",
+                }),
+            }),
+        )
+
+    async def async_step_reconfigure_ww_type(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 3: WW type."""
+        entry = self.config_entry
+
+        def _cur(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
+
+        if user_input is not None:
+            self._data[CONF_WW_INTERNAL] = user_input[CONF_WW_INTERNAL]
+            return await self.async_step_reconfigure_hk_count()
+
+        return self.async_show_form(
+            step_id="reconfigure_ww_type",
+            data_schema=vol.Schema({
+                vol.Required(CONF_WW_INTERNAL, default=_cur(CONF_WW_INTERNAL, False)): bool,
+            }),
+        )
+
+    async def async_step_reconfigure_hk_count(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 4: HK count + WPM count."""
+        entry = self.config_entry
+
+        def _cur(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
+
+        if user_input is not None:
+            self._data[CONF_NUM_HK] = user_input[CONF_NUM_HK]
+            self._data[CONF_NUM_WPM] = user_input[CONF_NUM_WPM]
+            return await self.async_step_reconfigure_hk_types()
+
+        level = self._data.get(CONF_LEVEL, _cur(CONF_LEVEL, Level.L1))
+        max_hk = 4 if level >= Level.L2 else 2
+
+        return self.async_show_form(
+            step_id="reconfigure_hk_count",
+            data_schema=vol.Schema({
+                vol.Required(CONF_NUM_HK, default=_cur(CONF_NUM_HK, 2)): vol.All(
+                    int, vol.Range(min=1, max=max_hk)
+                ),
+                vol.Required(CONF_NUM_WPM, default=_cur(CONF_NUM_WPM, 1)): vol.All(
+                    int, vol.Range(min=1, max=8)
+                ),
+            }),
+        )
+
+    async def async_step_reconfigure_hk_types(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 5: HK types."""
+        entry = self.config_entry
+        num_hk: int = self._data[CONF_NUM_HK]
+        cur_types: dict[str, int] = entry.options.get(
+            CONF_HK_TYPES, entry.data.get(CONF_HK_TYPES, {})
+        )
+
+        if user_input is not None:
+            self._data[CONF_HK_TYPES] = {
+                f"hk{n}": int(user_input[f"hk{n}_type"]) for n in range(1, num_hk + 1)
+            }
+            return await self.async_step_reconfigure_cooling()
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            schema_dict[vol.Required(f"hk{n}_type", default=cur_types.get(f"hk{n}", 1))] = vol.In(HK_TYPE_LABELS)
+
+        return self.async_show_form(
+            step_id="reconfigure_hk_types",
+            data_schema=vol.Schema(schema_dict),
+        )
+
+    async def async_step_reconfigure_cooling(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure Step 6: Cooling — update entry data and reload."""
+        entry = self.config_entry
+
+        def _cur(key: str, default: Any) -> Any:
+            return entry.options.get(key, entry.data.get(key, default))
+
+        if user_input is not None:
+            self._data[CONF_COOLING] = user_input[CONF_COOLING]
+            return self.async_update_reload_and_abort(
+                entry,
+                data={**entry.data, **self._data},
+                reason="reconfigure_successful",
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure_cooling",
+            data_schema=vol.Schema({
+                vol.Required(CONF_COOLING, default=_cur(CONF_COOLING, False)): bool,
             }),
         )
 
