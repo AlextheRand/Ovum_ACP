@@ -1,8 +1,8 @@
 {
-  "domain": "ovum_mira",
-  "name": "Ovum MIRA Heat Pump",
+  "domain": "ovum_acp",
+  "name": "Ovum ACP",
   "version": "0.1.0",
-  "requirements": ["pymodbus==3.8.*"],
+  "requirements": [],
   "iot_class": "local_polling",
   "config_flow": true,
   "codeowners": ["@alexander"],

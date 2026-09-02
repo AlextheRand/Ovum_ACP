@@ -7,6 +7,7 @@
         "data": {
           "host": "IP-Adresse",
           "port": "Modbus TCP Port",
+          "login_code": "Modbus Login-Code (dezimal, aus Einstellungen/Netzwerk am Display)",
           "scan_interval": "Abfrageintervall (Sekunden)"
         }
       },
@@ -30,6 +31,16 @@
         "data": {
           "num_hk": "Anzahl Heizkreise (1-4)",
           "num_wpm": "Anzahl WPM-Module (1-8)"
+        }
+      },
+      "hk_types": {
+        "title": "Heizkreis-Funktionen",
+        "description": "Wähle die Funktion jedes Heizkreises (Fußbodenheizung, Heizkörper, Pool oder AUS).",
+        "data": {
+          "hk1_type": "Heizkreis 1",
+          "hk2_type": "Heizkreis 2",
+          "hk3_type": "Heizkreis 3",
+          "hk4_type": "Heizkreis 4"
         }
       },
       "cooling": {

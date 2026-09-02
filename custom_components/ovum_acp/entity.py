@@ -18,7 +18,7 @@ class OvumMiraEntity(CoordinatorEntity[OvumMiraCoordinator]):
         super().__init__(coordinator)
         self._reg = reg
         self._attr_unique_id = f"{DOMAIN}_{reg.name}"
-        self._attr_translation_key = reg.name
+        self._attr_name = reg.name
 
     @property
     def device_info(self) -> DeviceInfo:

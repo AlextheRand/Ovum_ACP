@@ -7,6 +7,7 @@
         "data": {
           "host": "IP Address",
           "port": "Modbus TCP Port",
+          "login_code": "Modbus Login Code (decimal, read from Settings/Network on display)",
           "scan_interval": "Poll interval (seconds)"
         }
       },
@@ -30,6 +31,16 @@
         "data": {
           "num_hk": "Number of heating circuits",
           "num_wpm": "Number of WPM modules"
+        }
+      },
+      "hk_types": {
+        "title": "Heating Circuit Functions",
+        "description": "Select the function of each heating circuit.",
+        "data": {
+          "hk1_type": "Heating Circuit 1 Function",
+          "hk2_type": "Heating Circuit 2 Function",
+          "hk3_type": "Heating Circuit 3 Function",
+          "hk4_type": "Heating Circuit 4 Function"
         }
       },
       "cooling": {

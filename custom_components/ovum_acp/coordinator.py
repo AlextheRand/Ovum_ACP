@@ -11,8 +11,16 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException
+
+try:
+    from pymodbus.client import AsyncModbusTcpClient
+    from pymodbus.exceptions import ModbusException
+except ImportError as exc:
+    raise ImportError(
+        "pymodbus is required for ovum_mira. "
+        "It is bundled with HA's built-in modbus integration. "
+        f"Original error: {exc}"
+    ) from exc
 
 from .const import (
     DOMAIN,
@@ -21,7 +29,6 @@ from .const import (
     Level,
     LOGIN_ADDRESS,
     LOGIN_INTERVAL_SECONDS,
-    LOGIN_PAYLOAD,
     SLAVE_HSM,
     SLAVE_WPM_BASE,
     RegisterDef,
@@ -38,6 +45,8 @@ CONF_NUM_HK = "num_hk"
 CONF_NUM_WPM = "num_wpm"
 CONF_WW_INTERNAL = "ww_internal"
 CONF_COOLING = "cooling"
+CONF_LOGIN_CODE = "login_code"
+CONF_HK_TYPES = "hk_types"
 
 
 def _decode_value(registers: list[int], data_type: DataType) -> float | int | bool:
@@ -83,6 +92,13 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._ww_internal: bool = entry.data[CONF_WW_INTERNAL]
         self._cooling: bool = entry.data[CONF_COOLING]
 
+        # Login code: s32 big-endian split into two u16 words
+        login_code: int = entry.data.get(CONF_LOGIN_CODE, 1)
+        self._login_payload: list[int] = [
+            (login_code >> 16) & 0xFFFF,
+            login_code & 0xFFFF,
+        ]
+
         scan_interval = entry.options.get(CONF_SCAN_INTERVAL, entry.data[CONF_SCAN_INTERVAL])
         super().__init__(
             hass,
@@ -121,7 +137,7 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         ]
         for slave in slaves_to_login:
             result = await self._client.write_registers(
-                LOGIN_ADDRESS, LOGIN_PAYLOAD, slave=slave
+                LOGIN_ADDRESS, self._login_payload, device_id=slave
             )
             if result.isError():
                 raise UpdateFailed(f"Login FC16 failed on slave {slave}: {result}")
@@ -175,11 +191,11 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 try:
                     if fc == FC.FC4:
                         result = await self._client.read_input_registers(
-                            start, count=count, slave=slave
+                            start, count=count, device_id=slave
                         )
                     else:
                         result = await self._client.read_holding_registers(
-                            start, count=count, slave=slave
+                            start, count=count, device_id=slave
                         )
                     if result.isError():
                         _LOGGER.warning(
@@ -236,12 +252,60 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     # Write helpers (called by writable entities)
     # ------------------------------------------------------------------
 
+    async def _write_single_with_retry(self, slave: int, address: int, value: int) -> None:
+        """FC06 write single register with one re-login retry.
+
+        Use for single-word values (INT16, UINT16, BOOL, P_WAHL, P_INT) per MIRA documentation.
+        """
+        if self._client is None:
+            raise RuntimeError("No Modbus client")
+        try:
+            result = await self._client.write_register(address, value, device_id=slave)
+            if result.isError():
+                _LOGGER.warning("Write FC06 error addr=%d: %s — retrying after re-login", address, result)
+                await self._login()
+                result = await self._client.write_register(address, value, device_id=slave)
+                if result.isError():
+                    raise RuntimeError(f"Write FC06 failed after retry: {result}")
+        except (ModbusException, asyncio.TimeoutError) as exc:
+            _LOGGER.warning("Write FC06 exception addr=%d: %s — retrying", address, exc)
+            await self._ensure_connected()
+            await self._login()
+            result = await self._client.write_register(address, value, device_id=slave)
+            if result.isError():
+                raise RuntimeError(f"Write FC06 failed after reconnect: {result}") from exc
+
+    async def _write_with_retry(
+        self, slave: int, address: int, values: list[int]
+    ) -> None:
+        """FC16 write multiple registers with one re-login retry.
+
+        Use for multi-word values (FLOAT32, INT32) per MIRA documentation.
+        """
+        if self._client is None:
+            raise RuntimeError("No Modbus client")
+        try:
+            result = await self._client.write_registers(address, values, device_id=slave)
+            if result.isError():
+                _LOGGER.warning("Write FC16 error addr=%d: %s — retrying after re-login", address, result)
+                await self._login()
+                result = await self._client.write_registers(address, values, device_id=slave)
+                if result.isError():
+                    raise RuntimeError(f"Write FC16 failed after retry: {result}")
+        except (ModbusException, asyncio.TimeoutError) as exc:
+            _LOGGER.warning("Write FC16 exception addr=%d: %s — retrying", address, exc)
+            await self._ensure_connected()
+            await self._login()
+            result = await self._client.write_registers(address, values, device_id=slave)
+            if result.isError():
+                raise RuntimeError(f"Write FC16 failed after reconnect: {result}") from exc
+
     async def async_write_int16(self, slave: int, address: int, value: int) -> None:
         async with self._lock:
             await self._ensure_connected()
             if self._needs_relogin():
                 await self._login()
-            await self._write_with_retry(slave, address, _encode_int16(value))
+            await self._write_single_with_retry(slave, address, _encode_int16(value)[0])
 
     async def async_write_float32(self, slave: int, address: int, value: float) -> None:
         async with self._lock:
@@ -249,28 +313,6 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if self._needs_relogin():
                 await self._login()
             await self._write_with_retry(slave, address, _encode_float32(value))
-
-    async def _write_with_retry(
-        self, slave: int, address: int, values: list[int]
-    ) -> None:
-        """FC16 write with one re-login retry on failure."""
-        if self._client is None:
-            raise RuntimeError("No Modbus client")
-        try:
-            result = await self._client.write_registers(address, values, slave=slave)
-            if result.isError():
-                _LOGGER.warning("Write error addr=%d: %s — retrying after re-login", address, result)
-                await self._login()
-                result = await self._client.write_registers(address, values, slave=slave)
-                if result.isError():
-                    raise RuntimeError(f"Write failed after retry: {result}")
-        except (ModbusException, asyncio.TimeoutError) as exc:
-            _LOGGER.warning("Write exception addr=%d: %s — retrying", address, exc)
-            await self._ensure_connected()
-            await self._login()
-            result = await self._client.write_registers(address, values, slave=slave)
-            if result.isError():
-                raise RuntimeError(f"Write failed after reconnect: {result}") from exc
 
     async def async_write_register(self, reg_name: str, value: int | float) -> None:
         """Write by register name (looks up address/type from register list)."""

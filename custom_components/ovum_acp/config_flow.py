@@ -14,18 +14,21 @@ from pymodbus.exceptions import ModbusException
 
 from .const import (
     DEFAULT_HOST,
+    DEFAULT_LOGIN_CODE,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    HK_TYPE_LABELS,
     LOGIN_ADDRESS,
-    LOGIN_PAYLOAD,
     SLAVE_HSM,
     Level,
 )
 from .coordinator import (
     CONF_COOLING,
+    CONF_HK_TYPES,
     CONF_HOST,
     CONF_LEVEL,
+    CONF_LOGIN_CODE,
     CONF_NUM_HK,
     CONF_NUM_WPM,
     CONF_SCAN_INTERVAL,
@@ -36,15 +39,16 @@ from .coordinator import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _test_connection(host: str, port: int) -> str | None:
+async def _test_connection(host: str, port: int, login_code: int) -> str | None:
     """Test Modbus connection + login. Returns error key or None on success."""
+    login_payload = [(login_code >> 16) & 0xFFFF, login_code & 0xFFFF]
     client = AsyncModbusTcpClient(host, port=port)
     try:
         connected = await asyncio.wait_for(client.connect(), timeout=5.0)
         if not connected:
             return "cannot_connect"
         result = await asyncio.wait_for(
-            client.write_registers(LOGIN_ADDRESS, LOGIN_PAYLOAD, slave=SLAVE_HSM),
+            client.write_registers(LOGIN_ADDRESS, login_payload, device_id=SLAVE_HSM),
             timeout=5.0,
         )
         if result.isError():
@@ -68,7 +72,9 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         """Step 1: Connection."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            error = await _test_connection(user_input[CONF_HOST], user_input[CONF_PORT])
+            error = await _test_connection(
+                user_input[CONF_HOST], user_input[CONF_PORT], user_input[CONF_LOGIN_CODE]
+            )
             if error:
                 errors["base"] = error
             else:
@@ -80,6 +86,9 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_HOST, default=DEFAULT_HOST): str,
                 vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
+                vol.Required(CONF_LOGIN_CODE, default=DEFAULT_LOGIN_CODE): vol.All(
+                    int, vol.Range(min=1, max=2147483647)
+                ),
                 vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
                     int, vol.Range(min=10, max=300)
                 ),
@@ -128,7 +137,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data[CONF_NUM_HK] = user_input[CONF_NUM_HK]
             self._data[CONF_NUM_WPM] = user_input[CONF_NUM_WPM]
-            return await self.async_step_cooling()
+            return await self.async_step_hk_types()
 
         level = self._data.get(CONF_LEVEL, Level.L1)
         max_hk = 4 if level >= Level.L2 else 2
@@ -143,6 +152,27 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
                     int, vol.Range(min=1, max=8)
                 ),
             }),
+        )
+
+    async def async_step_hk_types(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Step 4b: Function type per heating circuit."""
+        num_hk: int = self._data[CONF_NUM_HK]
+
+        if user_input is not None:
+            self._data[CONF_HK_TYPES] = {
+                f"hk{n}": int(user_input[f"hk{n}_type"]) for n in range(1, num_hk + 1)
+            }
+            return await self.async_step_cooling()
+
+        schema_dict: dict[Any, Any] = {}
+        for n in range(1, num_hk + 1):
+            schema_dict[vol.Required(f"hk{n}_type", default=1)] = vol.In(HK_TYPE_LABELS)
+
+        return self.async_show_form(
+            step_id="hk_types",
+            data_schema=vol.Schema(schema_dict),
         )
 
     async def async_step_cooling(

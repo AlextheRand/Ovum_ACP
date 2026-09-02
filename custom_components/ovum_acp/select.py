@@ -16,6 +16,7 @@ from .const import (
     EMS_PV_STATUS_OPTIONS,
     HK_FIX_MODE_OPTIONS,
     HK_MODE_OPTIONS,
+    HK_TYPE_OPTIONS,
 )
 from .coordinator import OvumMiraCoordinator
 from .entity import OvumMiraEntity
@@ -23,14 +24,15 @@ from .entity import OvumMiraEntity
 _LOGGER = logging.getLogger(__name__)
 
 
-# Map register name patterns → option lists
+# Map register name patterns → option lists (more specific patterns first)
 _SELECT_OPTIONS: dict[str, list[str]] = {
-    "hk_mode": HK_MODE_OPTIONS,
-    "hk_fix_mode": HK_FIX_MODE_OPTIONS,
+    "_fix_mode": HK_FIX_MODE_OPTIONS,
+    "_mode": HK_MODE_OPTIONS,
+    "_type": HK_TYPE_OPTIONS,
     "ems_pvstatus": EMS_PV_STATUS_OPTIONS,
     "ww_switch_on": ["AUS", "EIN"],
     "ww_urlaub": ["AUS", "EIN"],
-    "hk_urlaub": ["AUS", "EIN"],
+    "_urlaub": ["AUS", "EIN"],
 }
 
 

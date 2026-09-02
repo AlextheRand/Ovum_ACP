@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature, UnitOfPower, UnitOfEnergy, UnitOfVolumeFlowRate
+from homeassistant.const import UnitOfTemperature, UnitOfPower, UnitOfEnergy, UnitOfVolumeFlowRate, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -52,8 +52,8 @@ _UNIT_DEVICE_CLASS: dict[str, tuple[str | None, SensorDeviceClass | None]] = {
     "l/min": (UnitOfVolumeFlowRate.LITERS_PER_MINUTE, None),
     "%": (None, None),
     "rps": (None, None),
-    "h": (None, None),
-    "min": (None, None),
+    "h": (UnitOfTime.HOURS, SensorDeviceClass.DURATION),
+    "min": (UnitOfTime.MINUTES, SensorDeviceClass.DURATION),
     "": (None, None),
 }
 
@@ -78,6 +78,9 @@ class OvumMiraSensor(OvumMiraEntity, SensorEntity):
             return None
         if isinstance(raw, float) and math.isnan(raw):
             return None
+
+        if self._reg.scale != 1.0 and isinstance(raw, (int, float)):
+            raw = raw * self._reg.scale
 
         # Named states for status codes
         if self._reg.name.endswith("wpm_status"):

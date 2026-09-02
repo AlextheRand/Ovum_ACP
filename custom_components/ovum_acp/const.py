@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 
-DOMAIN = "ovum_mira"
+DOMAIN = "ovum_acp"
 MANUFACTURER = "Ovum"
 MODEL = "MIRA"
 
@@ -16,8 +16,9 @@ DEFAULT_SCAN_INTERVAL = 30
 
 # Login constants (FC16 to addr 101 on each slave)
 LOGIN_ADDRESS = 101
-LOGIN_PAYLOAD = [15620, 48825]
 LOGIN_INTERVAL_SECONDS = 25 * 60  # Re-login every 25 min
+# Default login code "1" = disabled (user must set it to 1 at display, or enter their code)
+DEFAULT_LOGIN_CODE = 1  # 0x00000001 — login disabled at display
 
 # HSM slave (always present)
 SLAVE_HSM = 110
@@ -66,6 +67,7 @@ class RegisterDef:
     min_value: float | None = None
     max_value: float | None = None
     description: str = ""
+    scale: float = 1.0
 
     # Config flags — which integration configs expose this register
     requires_ww_internal: bool = False  # Only with Frischwasserstation (internal WW)
@@ -147,9 +149,9 @@ def _wpm_registers_l1(wpm_idx: int) -> list[RegisterDef]:
     slave = SLAVE_WPM_BASE + wpm_idx - 1
     return [
         RegisterDef(f"wpm{wpm_idx}_aufnahmeleistung",  56021, slave, DataType.FLOAT32, level=Level.L1,
-                    unit="kW", description="Aufnahmeleistung WP"),
+                    unit="W", scale=1000.0, description="Aufnahmeleistung WP"),
         RegisterDef(f"wpm{wpm_idx}_waermeleistung",    56023, slave, DataType.FLOAT32, level=Level.L1,
-                    unit="kW", description="Wärmeleistung WP (keine geeichte Messung)"),
+                    unit="W", scale=1000.0, description="Wärmeleistung WP (keine geeichte Messung)"),
         RegisterDef(f"wpm{wpm_idx}_status",            56025, slave, DataType.INT16,   level=Level.L1,
                     description="WP-Statuscode"),
         RegisterDef(f"wpm{wpm_idx}_eintrittstemperatur", 56026, slave, DataType.FLOAT32, level=Level.L1,
@@ -157,7 +159,7 @@ def _wpm_registers_l1(wpm_idx: int) -> list[RegisterDef]:
         RegisterDef(f"wpm{wpm_idx}_austrittstemperatur", 56028, slave, DataType.FLOAT32, level=Level.L1,
                     unit="°C", description="Austrittstemperatur WP"),
         RegisterDef(f"wpm{wpm_idx}_betriebsstunden",  56030, slave, DataType.INT32,   level=Level.L1,
-                    unit="h", description="Betriebsstunden Verdichter"),
+                    unit="h", scale=1/60, description="Betriebsstunden Verdichter (Register in Minuten)"),
     ]
 
 
@@ -206,6 +208,8 @@ def _wpm_registers_l3(wpm_idx: int) -> list[RegisterDef]:
 
 HSM_REGISTERS: list[RegisterDef] = [
     # --- WW Registers (Level 1) ---
+    RegisterDef("ww_switch_on",     55000, SLAVE_HSM, DataType.INT16,   writable=True,
+                description="WW-Hauptschalter (0=AUS, 1=EIN)"),
     RegisterDef("ww_soll",          55001, SLAVE_HSM, DataType.INT16,   writable=True,
                 unit="°C", min_value=10.0, max_value=62.0,
                 description="WW-Speichersollwert (aktiv geschriebener Sollwert)"),
@@ -218,8 +222,6 @@ HSM_REGISTERS: list[RegisterDef] = [
                 unit="°C", description="WW-Speichertemperatur Oben"),
     RegisterDef("ww_temp_unten",    55009, SLAVE_HSM, DataType.FLOAT32,
                 unit="°C", description="WW-Speichertemperatur Unten"),
-    RegisterDef("ww_switch_on",     55011, SLAVE_HSM, DataType.INT16,   writable=True,
-                description="WW-Hauptschalter (0=AUS, 1=EIN)"),
 
     # --- WW Level 2 ---
     RegisterDef("ww_anfstatus",     55012, SLAVE_HSM, DataType.INT16,   level=Level.L2,
@@ -408,6 +410,10 @@ def build_register_list(
 
     return regs
 
+
+# HK type options
+HK_TYPE_OPTIONS = ["AUS", "Fußbodenheizung", "Heizkörper", "Pool"]
+HK_TYPE_LABELS: dict[int, str] = {0: "AUS", 1: "Fußbodenheizung", 2: "Heizkörper", 3: "Pool"}
 
 # ---------------------------------------------------------------------------
 # WPM_STATUS code names (Level 3)
