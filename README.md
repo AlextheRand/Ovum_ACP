@@ -23,7 +23,7 @@ Home Assistant Custom Integration für Ovum MIRA Wärmepumpen (ACP-Protokoll, Mo
 ## Installation (HACS)
 
 1. HACS → Integrationen → ⋮ → Benutzerdefinierte Repositories
-2. URL: `https://github.com/alexander-m-py/ovum-acp-ha`
+2. URL: `https://github.com/AlextheRand/Ovum_ACP`
 3. Kategorie: Integration
 4. Hinzufügen → Ovum ACP installieren
 
