@@ -216,17 +216,10 @@ class OvumMiraOptionsFlow(OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Step 1: Connection + scan interval."""
-        errors: dict[str, str] = {}
+        """Step 1: Connection + scan interval (no live test — coordinator already connected)."""
         if user_input is not None:
-            error = await _test_connection(
-                user_input[CONF_HOST], user_input[CONF_PORT], user_input[CONF_LOGIN_CODE]
-            )
-            if error:
-                errors["base"] = error
-            else:
-                self._data = {**user_input}
-                return await self.async_step_license()
+            self._data = {**user_input}
+            return await self.async_step_license()
 
         return self.async_show_form(
             step_id="init",
@@ -240,7 +233,6 @@ class OvumMiraOptionsFlow(OptionsFlow):
                     int, vol.Range(min=10, max=300)
                 ),
             }),
-            errors=errors,
         )
 
     async def async_step_license(

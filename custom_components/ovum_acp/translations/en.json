@@ -63,7 +63,7 @@
     "step": {
       "init": {
         "title": "Connection",
-        "description": "Change connection settings. A connection test is performed before saving.",
+        "description": "Change connection settings. Changes take effect after saving (integration reloads automatically).",
         "data": {
           "host": "IP Address",
           "port": "Modbus TCP Port",

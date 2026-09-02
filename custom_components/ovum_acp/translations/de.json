@@ -63,7 +63,7 @@
     "step": {
       "init": {
         "title": "Verbindung",
-        "description": "Verbindungseinstellungen ändern. Vor dem Speichern wird ein Verbindungstest durchgeführt.",
+        "description": "Verbindungseinstellungen ändern. Änderungen werden nach dem Speichern aktiv (Integration lädt automatisch neu).",
         "data": {
           "host": "IP-Adresse",
           "port": "Modbus TCP Port",
