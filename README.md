@@ -2,70 +2,147 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-Home Assistant Custom Integration für Ovum MIRA Wärmepumpen (ACP-Protokoll, Modbus TCP).
+Inoffizielle Home Assistant Integration für **Ovum MIRA Wärmepumpen** mit LSM-Display und aktiviertem Modbus TCP.
 
-## Features
+Diese Integration liest automatisch alle relevanten Sensordaten aus deiner Wärmepumpe (Temperaturen, Leistung, Laufzeit) und ermöglicht es, Heizkreis-Modi und Sollwerte direkt aus Home Assistant heraus zu steuern — ganz ohne externe Skripte oder manuelle Modbus-Befehle.
 
-- **Vollständige Modbus-TCP-Anbindung** ohne externe Skripte
-- **Automatischer Login** (FC16 auf HSM + WPM-Slaves, alle 25 Minuten erneuert)
-- **Sensor-Entities** für alle relevanten Register (Temperaturen, Leistung, Status, Laufzeit)
-- **Select-Entities** zum Schreiben von Heizkreis-Modi, EMS-PV-Status, WW-Schalter
-- **Number-Entities** für Sollwerte (WW-Soll, Raumsoll, Puffer-Soll PV)
-- **Config Flow** mit 6 Schritten: IP/Port, Level, Heizkreise, HK-Typen, Kühlung, WPM-Anzahl
-- HACS-kompatibel
+---
 
-## Unterstützte Hardware
+## Voraussetzungen
 
-- Ovum MIRA Wärmepumpen (LSM Display, Modbus TCP V1.1.x)
-- HSM (Hydraulikeinheit, Slave 110)
-- WPM (Wärmepumpenmodul, Slave 111–118)
+- Home Assistant (empfohlen: 2024.1.0 oder neuer)
+- HACS installiert ([Anleitung](https://hacs.xyz/docs/setup/download))
+- Ovum MIRA Wärmepumpe mit **LSM Display** und **Modbus TCP aktiviert**
+- Die Wärmepumpe muss im selben Netzwerk wie Home Assistant erreichbar sein
+- Den **Modbus Login-Code** der Anlage (steht am MIRA-Display unter Einstellungen → Modbus)
 
-## Installation (HACS)
+---
 
-1. HACS → Integrationen → ⋮ → Benutzerdefinierte Repositories
-2. URL: `https://github.com/AlextheRand/Ovum_ACP`
-3. Kategorie: Integration
-4. Hinzufügen → Ovum ACP installieren
+## Installation über HACS (empfohlen)
+
+1. HACS öffnen → oben rechts auf die **drei Punkte (⋮)** klicken → **Benutzerdefinierte Repositories**
+2. URL eintragen: `https://github.com/AlextheRand/Ovum_ACP`
+3. Kategorie: **Integration** auswählen → **Hinzufügen**
+4. Die Integration **Ovum ACP** erscheint jetzt in der Liste → **Herunterladen**
+5. Home Assistant neu starten
+
+---
 
 ## Manuelle Installation
 
-```bash
-cp -r custom_components/ovum_acp /config/custom_components/
-```
+Falls du HACS nicht verwendest:
 
-HA neu starten, dann unter **Einstellungen → Integrationen → + Hinzufügen → Ovum ACP**.
+1. Den Ordner `custom_components/ovum_acp` aus diesem Repository herunterladen
+2. Den Ordner in dein Home Assistant Konfigurationsverzeichnis kopieren: `/config/custom_components/ovum_acp/`
+3. Home Assistant neu starten
 
-## Konfiguration
+---
 
-| Feld | Standard | Beschreibung |
+## Einrichtung in Home Assistant
+
+1. **Einstellungen → Geräte & Dienste → + Integration hinzufügen**
+2. Nach **Ovum ACP** suchen und auswählen
+3. Den Einrichtungsassistenten Schritt für Schritt ausfüllen:
+
+### Schritt 1 — Verbindung
+
+| Feld | Beispiel | Erklärung |
 |---|---|---|
-| Host | 192.168.178.82 | IP der MIRA-Steuerung |
-| Port | 502 | Modbus-TCP-Port |
-| Login-Code | 1 | 32-Bit Login-Code (siehe MIRA-Display) |
-| Level | L1 | Datentiefe: L1 (Start), L2 (Plus), L3 (BMS) |
-| Heizkreise | 2 | Anzahl HK (1–4) |
-| HK-Typen | Fußbodenheizung | Pro HK: AUS / Fußbodenheizung / Heizkörper / Pool |
-| Kühlung | Nein | Kühl-Register aktivieren |
-| WPM-Anzahl | 1 | Anzahl Wärmepumpenmodule (1–8) |
+| IP-Adresse | `192.168.178.82` | IP deiner MIRA-Steuerung im Heimnetz |
+| Port | `502` | Standard-Modbus-Port, normalerweise nicht ändern |
+| Login-Code | `1` | Steht am LSM-Display unter Einstellungen → Modbus |
 
-## Entities (Auswahl, Level L1)
+### Schritt 2 — Datentiefe (Level)
 
-| Entity | Typ | Beschreibung |
+Bestimmt, wie viele Register ausgelesen werden:
+
+| Level | Beschreibung |
+|---|---|
+| **L1** | Grunddaten: Temperaturen, Leistung, Laufzeit, Sollwerte — für die meisten Nutzer ausreichend |
+| **L2** | Zusätzlich: Raumsoll, Heizgrenzen, erweiterte Status |
+| **L3** | Vollständig: alle BMS-Register (nur für Experten / Servicetechniker) |
+
+### Schritt 3 — Heizkreise
+
+Anzahl der konfigurierten Heizkreise (1–4). Steht in der Dokumentation deiner Anlage oder am Display unter Heizkreis-Konfiguration.
+
+### Schritt 4 — Heizkreis-Typen
+
+Pro Heizkreis den Typ auswählen:
+- **Fußbodenheizung** — Niedertemperatur, flache Heizkurve
+- **Heizkörper** — Hochtemperatur, steilere Heizkurve
+- **Pool**
+- **AUS** — Heizkreis deaktiviert
+
+### Schritt 5 — Kühlung
+
+Aktiviere diese Option nur, wenn deine Anlage für Kühlung ausgerüstet ist (Passive Cooling / Active Cooling). Im Zweifelsfall: **Nein**.
+
+### Schritt 6 — Anzahl Wärmepumpenmodule (WPM)
+
+Die meisten Anlagen haben **1 WPM**. Mehrverdichter-Anlagen können 2 oder mehr haben (steht im Serviceprotokoll der Anlage).
+
+---
+
+## Was die Integration anlegt
+
+Nach der Einrichtung erscheinen automatisch Sensoren und Steuerelemente unter dem Gerät **Ovum MIRA**:
+
+### Sensoren (Auswahl)
+
+| Name | Beschreibung |
+|---|---|
+| Außentemperatur | Aktuelle Außentemperatur (°C) |
+| WW Speicher oben | Warmwassertemperatur oben im Speicher (°C) |
+| WW Speicher unten | Warmwassertemperatur unten im Speicher (°C) |
+| Heizungspuffer oben | Pufferspeicher Temperatur oben (°C) |
+| Heizungspuffer unten | Pufferspeicher Temperatur unten (°C) |
+| Aufnahmeleistung | Aktuelle elektrische Leistungsaufnahme des Verdichters (W) |
+| Wärmeleistung | Aktuell erzeugte Wärmeleistung (W) |
+| Betriebsstunden | Gesamte Verdichter-Laufzeit (h) |
+| Eintrittstemperatur | Vorlauftemperatur am WPM (°C) |
+| Austrittstemperatur | Rücklauftemperatur am WPM (°C) |
+
+### Steuerelemente
+
+| Name | Typ | Funktion |
 |---|---|---|
-| `sensor.ovum_mira_aussentemperatur` | Sensor | Außentemperatur (°C) |
-| `sensor.ovum_mira_ww_temp_oben` | Sensor | WW-Speicher oben (°C) |
-| `sensor.ovum_mira_puffer_temp_unten` | Sensor | Heizungspuffer unten (°C) |
-| `sensor.ovum_mira_wpm1_aufnahmeleistung` | Sensor | Elektrische Aufnahme (W) |
-| `sensor.ovum_mira_wpm1_waermeleistung` | Sensor | Wärmeleistung (W) |
-| `sensor.ovum_mira_wpm1_betriebsstunden` | Sensor | Verdichter-Laufzeit (h) |
-| `select.ovum_mira_hk1_mode` | Select | HK1 Modus (AUS/AUTOMATIK/WINTER/SOMMER) |
-| `select.ovum_mira_ems_pvstatus` | Select | EMS PV-Status (Neutral/Erhöhen/Reduzieren) |
-| `number.ovum_mira_ww_soll` | Number | WW-Solltemperatur (°C) |
+| WW Solltemperatur | Zahl | Warmwasser-Zieltemperatur setzen (z. B. 45–55 °C) |
+| HK1 Modus | Auswahl | Heizkreis 1 auf AUS / AUTOMATIK / WINTER / SOMMER schalten |
+| HK2 Modus | Auswahl | Heizkreis 2 umschalten |
+| EMS PV-Status | Auswahl | PV-Überschuss-Signal: Neutral / Erhöhen / Reduzieren |
 
-## Modbus-Login
+> **Hinweis:** Nicht alle Sensoren sind bei jeder Anlage verkabelt. Sensoren ohne physischen Fühler zeigen den Status **Nicht verfügbar** — das ist kein Fehler.
 
-MIRA erfordert einen FC16-Login auf Adresse 101 jedes Slaves. Die Integration übernimmt das vollständig — kein externer Login-Skript notwendig. Der Login-Code steht am MIRA-Display unter Modbus-Einstellungen.
+---
+
+## Häufige Probleme
+
+**Integration wird nicht gefunden / "Verbindung fehlgeschlagen"**
+- Prüfen ob die IP-Adresse korrekt ist (am Router nachschauen oder am MIRA-Display)
+- Prüfen ob Modbus TCP am MIRA-Display aktiviert ist (Einstellungen → Kommunikation → Modbus)
+- Prüfen ob Port 502 nicht durch eine Firewall blockiert wird
+
+**Login-Code ist falsch**
+- Den Code am LSM-Display ablesen: Einstellungen → Modbus → Zugangscode
+- Standardwert ist meist `1` oder `0`
+
+**Sensor zeigt "Nicht verfügbar"**
+- Der Temperaturfühler an dieser Position ist nicht angeschlossen — normal bei teilbestückten Anlagen
+
+---
+
+## Unterstützte Hardware
+
+- Ovum MIRA Wärmepumpen mit **LSM Display**
+- Modbus TCP Protokoll V1.1.x
+- HSM (Hydrauliksteuermodul, Slave-Adresse 110)
+- WPM (Wärmepumpenmodul, Slave-Adressen 111–118)
+
+Andere Ovum-Modelle ohne LSM-Display oder ohne Modbus TCP werden **nicht** unterstützt.
+
+---
 
 ## Lizenz
 
-MIT
+MIT — kostenlos nutzbar, keine Garantie, kein offizieller Ovum-Support.
