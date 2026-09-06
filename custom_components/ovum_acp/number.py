@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -10,7 +11,7 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, DataType
+from .const import DOMAIN, DataType, RegisterDef
 from .coordinator import OvumMiraCoordinator
 from .entity import OvumMiraEntity
 
@@ -27,7 +28,7 @@ async def async_setup_entry(
     for reg in coordinator.registers:
         if not reg.writable:
             continue
-        if reg.data_type not in (DataType.FLOAT32, DataType.INT16):
+        if reg.data_type not in (DataType.FLOAT32, DataType.INT16, DataType.INT32):
             continue
         # INT16 writable without named options → numeric entry (e.g. ww_soll, puffer_soll_pv)
         from .select import _get_options
@@ -42,7 +43,7 @@ async def async_setup_entry(
 class OvumMiraNumber(OvumMiraEntity, NumberEntity):
     """Number entity for a writable temperature or setpoint register."""
 
-    def __init__(self, coordinator: OvumMiraCoordinator, reg: OvumMiraEntity) -> None:
+    def __init__(self, coordinator: OvumMiraCoordinator, reg: RegisterDef) -> None:
         super().__init__(coordinator, reg)
         self._attr_mode = NumberMode.BOX
         if reg.unit == "°C":
@@ -67,9 +68,17 @@ class OvumMiraNumber(OvumMiraEntity, NumberEntity):
             return None
 
     async def async_set_native_value(self, value: float) -> None:
+        if not math.isfinite(value) or not self.native_min_value <= value <= self.native_max_value:
+            raise ValueError(f"Value outside write limits for {self._reg.name}")
+        if self._reg.data_type in (DataType.INT16, DataType.INT32) and value != int(value):
+            raise ValueError(f"Integer required for {self._reg.name}")
         if self._reg.data_type == DataType.FLOAT32:
             await self.coordinator.async_write_float32(
                 self._reg.slave, self._reg.address, value
+            )
+        elif self._reg.data_type == DataType.INT32:
+            await self.coordinator.async_write_int32(
+                self._reg.slave, self._reg.address, int(value)
             )
         else:
             await self.coordinator.async_write_int16(

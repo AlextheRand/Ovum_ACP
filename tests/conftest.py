@@ -6,10 +6,8 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.core import HomeAssistant
-
-from custom_components.ovum_mira.const import DOMAIN, Level
-from custom_components.ovum_mira.coordinator import (
+from custom_components.ovum_acp.const import Level
+from custom_components.ovum_acp.coordinator import (
     CONF_COOLING,
     CONF_HOST,
     CONF_LEVEL,
@@ -22,6 +20,7 @@ from custom_components.ovum_mira.coordinator import (
 
 TEST_HOST = "192.168.178.82"
 TEST_PORT = 502
+TEST_LOGIN_CODE = 123456  # Synthetic test value, never used against hardware.
 
 MOCK_CONFIG_DATA: dict[str, Any] = {
     CONF_HOST: TEST_HOST,
@@ -46,7 +45,7 @@ def make_mock_modbus_result(registers: list[int], is_error: bool = False) -> Mag
 def mock_modbus_client():
     """Patch AsyncModbusTcpClient with a mock that always connects and logins successfully."""
     with patch(
-        "custom_components.ovum_mira.coordinator.AsyncModbusTcpClient"
+        "custom_components.ovum_acp.coordinator.AsyncModbusTcpClient"
     ) as mock_cls:
         client = AsyncMock()
         client.connected = True
@@ -56,12 +55,15 @@ def mock_modbus_client():
         client.write_registers = AsyncMock(
             return_value=make_mock_modbus_result([])
         )
+        client.write_register = AsyncMock(
+            return_value=make_mock_modbus_result([])
+        )
         # Default: read_holding_registers returns zeros
         client.read_holding_registers = AsyncMock(
-            side_effect=lambda addr, count, slave: make_mock_modbus_result([0] * count)
+            side_effect=lambda addr, count, device_id: make_mock_modbus_result([0] * count)
         )
         client.read_input_registers = AsyncMock(
-            side_effect=lambda addr, count, slave: make_mock_modbus_result([0] * count)
+            side_effect=lambda addr, count, device_id: make_mock_modbus_result([0] * count)
         )
         mock_cls.return_value = client
         yield client

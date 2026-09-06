@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 import struct
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.ovum_mira.const import DataType, FC, Level, SLAVE_HSM, SLAVE_WPM_BASE
-from custom_components.ovum_mira.coordinator import (
+from custom_components.ovum_acp.const import (
+    DataType, Level, SLAVE_HSM, SLAVE_WPM_BASE,
+    build_register_list, is_register_value_valid,
+)
+from custom_components.ovum_acp.coordinator import (
     OvumMiraCoordinator,
     _decode_value,
     _encode_float32,
     _encode_int16,
 )
 
-from .conftest import MOCK_CONFIG_DATA, make_mock_modbus_result
+from .conftest import MOCK_CONFIG_DATA, TEST_LOGIN_CODE, make_mock_modbus_result
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +58,17 @@ def test_decode_bool() -> None:
     assert _decode_value([0], DataType.BOOL) is False
 
 
+def test_actual_hk3_wire_response_is_unavailable() -> None:
+    """Reproduce the read-only FC3 capture independently of HA state filters."""
+    words = [65535, 32767, 32767, 32704, 0, 32704, 0, 65535]
+    regs = build_register_list(Level.L2, 3, 1, False, True)
+    for reg in regs:
+        if reg.name.startswith("hk3_") and 56070 <= reg.address <= 56077:
+            offset = reg.address - 56070
+            value = _decode_value(words[offset:offset + reg.count], reg.data_type)
+            assert not is_register_value_valid(reg, value), reg.name
+
+
 # ---------------------------------------------------------------------------
 # Integration tests: coordinator lifecycle
 # ---------------------------------------------------------------------------
@@ -83,9 +96,11 @@ def coordinator(mock_entry, mock_modbus_client):
     coord._cooling = MOCK_CONFIG_DATA["cooling"]
     coord._client = mock_modbus_client
     coord._last_login = None
+    coord._login_payload = [TEST_LOGIN_CODE >> 16, TEST_LOGIN_CODE & 0xFFFF]
     import asyncio
     coord._lock = asyncio.Lock()
-    from custom_components.ovum_mira.const import build_register_list
+    coord._failed_read_batches = set()
+    from custom_components.ovum_acp.const import build_register_list
     coord.registers = build_register_list(
         coord._level, coord._num_hk, coord._num_wpm, coord._ww_internal, coord._cooling
     )
@@ -96,9 +111,10 @@ def coordinator(mock_entry, mock_modbus_client):
 async def test_login_sends_fc16_to_hsm_and_wpm(coordinator, mock_modbus_client) -> None:
     await coordinator._login()
     calls = mock_modbus_client.write_registers.call_args_list
-    slaves_called = {c.kwargs.get("slave") or c.args[2] for c in calls}
+    slaves_called = {c.kwargs["device_id"] for c in calls}
     assert SLAVE_HSM in slaves_called
     assert SLAVE_WPM_BASE in slaves_called  # WPM1
+    assert all(call.args[1] == [1, 57920] for call in calls)
 
 
 @pytest.mark.asyncio
@@ -123,12 +139,12 @@ async def test_needs_relogin_false_within_interval(coordinator) -> None:
 
 
 @pytest.mark.asyncio
-async def test_write_int16_calls_fc16(coordinator, mock_modbus_client) -> None:
+async def test_write_int16_calls_fc06(coordinator, mock_modbus_client) -> None:
     await coordinator._login()  # set timestamp so no re-login
-    mock_modbus_client.write_registers.reset_mock()
+    mock_modbus_client.write_register.reset_mock()
     await coordinator.async_write_int16(SLAVE_HSM, 55001, 45)
-    mock_modbus_client.write_registers.assert_called_once()
-    args = mock_modbus_client.write_registers.call_args
+    mock_modbus_client.write_register.assert_called_once()
+    args = mock_modbus_client.write_register.call_args
     assert args.args[0] == 55001 or args.kwargs.get("address") == 55001
 
 
@@ -151,9 +167,8 @@ async def test_write_retries_on_error(coordinator, mock_modbus_client) -> None:
     await coordinator._login()
     error_result = make_mock_modbus_result([], is_error=True)
     success_result = make_mock_modbus_result([])
-    mock_modbus_client.write_registers.side_effect = [
+    mock_modbus_client.write_register.side_effect = [
         error_result,   # first write fails
-        success_result, # re-login write (FC16 login) succeeds
         success_result, # retry write succeeds
     ]
     # Should not raise
@@ -161,11 +176,79 @@ async def test_write_retries_on_error(coordinator, mock_modbus_client) -> None:
 
 
 @pytest.mark.asyncio
+async def test_named_int32_write_uses_fc16(coordinator, mock_modbus_client) -> None:
+    await coordinator._login()
+    mock_modbus_client.write_registers.reset_mock()
+    coordinator.async_request_refresh = AsyncMock()
+    await coordinator.async_write_register("ems_grid_power", -100000)
+    mock_modbus_client.write_registers.assert_awaited_once_with(
+        55072, [65534, 31072], device_id=110,
+    )
+    mock_modbus_client.write_register.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_read_batches_do_not_cross_undocumented_gap(coordinator, mock_modbus_client):
+    await coordinator._read_all()
+    calls = mock_modbus_client.read_holding_registers.call_args_list
+    assert any(call.args[0] == 55070 and call.kwargs["count"] == 8 for call in calls)
+    for call in calls:
+        if call.kwargs["device_id"] == SLAVE_HSM:
+            assert not call.args[0] <= 55078 < call.args[0] + call.kwargs["count"]
+
+
+@pytest.mark.asyncio
+async def test_repeated_partial_read_errors_are_logged_once(
+    coordinator, mock_modbus_client, caplog,
+) -> None:
+    error_result = make_mock_modbus_result([], is_error=True)
+    mock_modbus_client.read_holding_registers.return_value = error_result
+    mock_modbus_client.read_holding_registers.side_effect = None
+
+    await coordinator._read_all()
+    first_warnings = [record for record in caplog.records if "Read error" in record.message]
+    assert first_warnings
+
+    await coordinator._read_all()
+    all_warnings = [record for record in caplog.records if "Read error" in record.message]
+    assert len(all_warnings) == len(first_warnings)
+
+
+@pytest.mark.asyncio
+async def test_partial_read_recovery_rearms_error_logging(
+    coordinator, mock_modbus_client, caplog,
+) -> None:
+    import logging
+
+    caplog.set_level(logging.INFO)
+    mock_modbus_client.read_holding_registers.side_effect = None
+    mock_modbus_client.read_holding_registers.return_value = make_mock_modbus_result(
+        [], is_error=True,
+    )
+    failed = await coordinator._read_all()
+    assert "hk1_mode" not in failed
+    first_count = len(coordinator._failed_read_batches)
+    assert first_count > 0
+
+    mock_modbus_client.read_holding_registers.side_effect = (
+        lambda addr, count, device_id: make_mock_modbus_result([0] * count)
+    )
+    recovered = await coordinator._read_all()
+    assert recovered["hk1_mode"] == 0
+    assert not coordinator._failed_read_batches
+    assert sum("Read recovered" in record.message for record in caplog.records) == first_count
+
+    mock_modbus_client.read_holding_registers.side_effect = None
+    await coordinator._read_all()
+    assert sum("Read error" in record.message for record in caplog.records) == 2 * first_count
+
+
+@pytest.mark.asyncio
 async def test_reconnect_on_disconnected_client(coordinator, mock_modbus_client) -> None:
     """If client disconnects, _ensure_connected reconnects."""
     mock_modbus_client.connected = False
     with patch(
-        "custom_components.ovum_mira.coordinator.AsyncModbusTcpClient"
+        "custom_components.ovum_acp.coordinator.AsyncModbusTcpClient"
     ) as mock_cls:
         new_client = AsyncMock()
         new_client.connected = True

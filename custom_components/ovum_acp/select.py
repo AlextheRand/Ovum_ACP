@@ -38,7 +38,7 @@ _SELECT_OPTIONS: dict[str, list[str]] = {
 
 def _get_options(reg_name: str) -> list[str] | None:
     for pattern, opts in _SELECT_OPTIONS.items():
-        if pattern in reg_name:
+        if reg_name.endswith(pattern):
             return opts
     return None
 

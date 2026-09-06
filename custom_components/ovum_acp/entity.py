@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, MANUFACTURER, MODEL, RegisterDef
+from .const import DOMAIN, MANUFACTURER, MODEL, RegisterDef, is_register_value_valid
 from .coordinator import OvumMiraCoordinator
 
 
@@ -33,15 +33,11 @@ class OvumMiraEntity(CoordinatorEntity[OvumMiraCoordinator]):
     def available(self) -> bool:
         if not super().available:
             return False
-        raw = self.coordinator.data.get(self._reg.name)
-        if raw is None:
-            return False
-        try:
-            import math
-            return not math.isnan(float(raw))
-        except (TypeError, ValueError):
-            return True
+        return is_register_value_valid(
+            self._reg,
+            self.coordinator.data.get(self._reg.name),
+        )
 
     @property
-    def _raw_value(self) -> int | float | bool | None:
+    def _raw_value(self) -> int | float | bool | str | None:
         return self.coordinator.data.get(self._reg.name)

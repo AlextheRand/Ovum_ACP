@@ -17,7 +17,7 @@ try:
     from pymodbus.exceptions import ModbusException
 except ImportError as exc:
     raise ImportError(
-        "pymodbus is required for ovum_mira. "
+        "pymodbus is required for ovum_acp. "
         "It is bundled with HA's built-in modbus integration. "
         f"Original error: {exc}"
     ) from exc
@@ -51,7 +51,12 @@ CONF_HK_TYPES = "hk_types"
 CONF_HK_COOLING = "hk_cooling"  # dict: {"hk1": True, "hk2": True, "hk3": False}
 
 
-def _decode_value(registers: list[int], data_type: DataType) -> float | int | bool:
+def _decode_value(registers: list[int], data_type: DataType) -> float | int | bool | str | None:
+    if data_type == DataType.TEXT:
+        raw = struct.pack(f">{len(registers)}H", *registers)
+        if all(byte == 255 for byte in raw):
+            return None
+        return raw.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
     if data_type == DataType.FLOAT32:
         raw = struct.pack(">HH", registers[0], registers[1])
         value = struct.unpack(">f", raw)[0]
@@ -68,7 +73,7 @@ def _decode_value(registers: list[int], data_type: DataType) -> float | int | bo
     if data_type == DataType.UINT16:
         return registers[0]
     if data_type == DataType.BOOL:
-        return bool(registers[0])
+        return bool(registers[0]) if registers[0] in (0, 1) else None
     raise ValueError(f"Unknown DataType: {data_type}")
 
 
@@ -80,6 +85,11 @@ def _encode_int16(value: int) -> list[int]:
 def _encode_float32(value: float) -> list[int]:
     raw = struct.pack(">f", value)
     return list(struct.unpack(">HH", raw))
+
+
+def _encode_int32(value: int) -> list[int]:
+    """Encode signed EMS power values in high-word-first order."""
+    return list(struct.unpack(">HH", struct.pack(">i", value)))
 
 
 class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -124,6 +134,7 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._client: AsyncModbusTcpClient | None = None
         self._last_login: datetime | None = None
         self._lock = asyncio.Lock()
+        self._failed_read_batches: set[tuple[int, int, int, int]] = set()
 
         self.registers: list[RegisterDef] = build_register_list(
             self._level, self._num_hk, self._num_wpm,
@@ -185,14 +196,14 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data: dict[str, Any] = {}
 
         for (slave, fc), regs in groups.items():
-            # Build contiguous batches (gap ≤ 2 registers → merge)
-            # Keep gap small: some MIRAs reject reads crossing non-existent address ranges.
+            # Never cross undocumented gaps: an illegal address can reject the
+            # entire batch, including otherwise valid EMS controls.
             batches: list[tuple[int, int]] = []  # (start_addr, end_addr_exclusive)
             batch_start = regs[0].address
             batch_end = regs[0].address + regs[0].count
 
             for reg in regs[1:]:
-                if reg.address <= batch_end + 2:
+                if reg.address <= batch_end:
                     batch_end = max(batch_end, reg.address + reg.count)
                 else:
                     batches.append((batch_start, batch_end))
@@ -204,6 +215,7 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raw_regs: dict[int, int] = {}
             for start, end in batches:
                 count = end - start
+                batch_key = (slave, int(fc), start, count)
                 try:
                     if fc == FC.FC4:
                         result = await self._client.read_input_registers(
@@ -214,15 +226,28 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             start, count=count, device_id=slave
                         )
                     if result.isError():
-                        _LOGGER.warning(
-                            "Read error slave=%d fc=%d addr=%d count=%d: %s",
-                            slave, fc, start, count, result,
-                        )
+                        if batch_key not in self._failed_read_batches:
+                            _LOGGER.warning(
+                                "Read error slave=%d fc=%d addr=%d count=%d: %s",
+                                slave, fc, start, count, result,
+                            )
+                            self._failed_read_batches.add(batch_key)
                         continue
+                    if batch_key in self._failed_read_batches:
+                        _LOGGER.info(
+                            "Read recovered slave=%d fc=%d addr=%d count=%d",
+                            slave, fc, start, count,
+                        )
+                        self._failed_read_batches.remove(batch_key)
                     for i, val in enumerate(result.registers):
                         raw_regs[start + i] = val
                 except (ModbusException, asyncio.TimeoutError) as exc:
-                    _LOGGER.warning("Read exception slave=%d addr=%d: %s", slave, start, exc)
+                    if batch_key not in self._failed_read_batches:
+                        _LOGGER.warning(
+                            "Read exception slave=%d fc=%d addr=%d count=%d: %s",
+                            slave, fc, start, count, exc,
+                        )
+                        self._failed_read_batches.add(batch_key)
 
             # Decode
             for reg in regs:
@@ -330,6 +355,14 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._login()
             await self._write_with_retry(slave, address, _encode_float32(value))
 
+    async def async_write_int32(self, slave: int, address: int, value: int) -> None:
+        values = _encode_int32(value)  # Validate before any network operation.
+        async with self._lock:
+            await self._ensure_connected()
+            if self._needs_relogin():
+                await self._login()
+            await self._write_with_retry(slave, address, values)
+
     async def async_write_register(self, reg_name: str, value: int | float) -> None:
         """Write by register name (looks up address/type from register list)."""
         for reg in self.registers:
@@ -338,6 +371,8 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     raise ValueError(f"Register {reg_name} is not writable")
                 if reg.data_type == DataType.FLOAT32:
                     await self.async_write_float32(reg.slave, reg.address, float(value))
+                elif reg.data_type == DataType.INT32:
+                    await self.async_write_int32(reg.slave, reg.address, int(value))
                 else:
                     await self.async_write_int16(reg.slave, reg.address, int(value))
                 await self.async_request_refresh()

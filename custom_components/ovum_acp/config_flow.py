@@ -18,7 +18,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    HK_TYPE_LABELS,
+    hk_type_labels,
     LOGIN_ADDRESS,
     SLAVE_HSM,
     Level,
@@ -169,7 +169,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         schema_dict: dict[Any, Any] = {}
         for n in range(1, num_hk + 1):
-            schema_dict[vol.Required(f"hk{n}_type", default=1)] = vol.In(HK_TYPE_LABELS)
+            schema_dict[vol.Required(f"hk{n}_type", default=1)] = vol.In(hk_type_labels(n))
 
         return self.async_show_form(
             step_id="hk_types",
@@ -351,7 +351,7 @@ class OvumMiraConfigFlow(ConfigFlow, domain=DOMAIN):
 
         schema_dict: dict[Any, Any] = {}
         for n in range(1, num_hk + 1):
-            schema_dict[vol.Required(f"hk{n}_type", default=cur_types.get(f"hk{n}", 1))] = vol.In(HK_TYPE_LABELS)
+            schema_dict[vol.Required(f"hk{n}_type", default=cur_types.get(f"hk{n}", 1))] = vol.In(hk_type_labels(n))
 
         return self.async_show_form(
             step_id="reconfigure_hk_types",
@@ -528,7 +528,7 @@ class OvumMiraOptionsFlow(OptionsFlow):
         schema_dict: dict[Any, Any] = {}
         for n in range(1, num_hk + 1):
             default_type = cur_types.get(f"hk{n}", 1)
-            schema_dict[vol.Required(f"hk{n}_type", default=default_type)] = vol.In(HK_TYPE_LABELS)
+            schema_dict[vol.Required(f"hk{n}_type", default=default_type)] = vol.In(hk_type_labels(n))
 
         return self.async_show_form(
             step_id="hk_types",

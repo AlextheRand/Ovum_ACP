@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import math
+from dataclasses import dataclass
 from enum import IntEnum, auto
 
 DOMAIN = "ovum_acp"
@@ -38,6 +39,7 @@ class DataType(IntEnum):
     INT32 = auto()    # 2 registers, signed 32-bit big-endian
     FLOAT32 = auto()  # 2 registers, IEEE 754 big-endian
     BOOL = auto()     # 1 register, 0/1
+    TEXT = auto()     # Fixed-width text, two bytes per register
 
 
 class FC(IntEnum):
@@ -68,6 +70,7 @@ class RegisterDef:
     max_value: float | None = None
     description: str = ""
     scale: float = 1.0
+    register_count: int | None = None
 
     # Config flags — which integration configs expose this register
     requires_ww_internal: bool = False  # Only with Frischwasserstation (internal WW)
@@ -77,9 +80,47 @@ class RegisterDef:
     @property
     def count(self) -> int:
         """Number of Modbus registers consumed."""
+        if self.register_count is not None:
+            return self.register_count
         if self.data_type in (DataType.FLOAT32, DataType.INT32):
             return 2
         return 1
+
+
+def is_register_value_valid(reg: RegisterDef, value: object) -> bool:
+    """Return whether a decoded value is usable for this register.
+
+    The MIRA uses INT16_MAX for unavailable integer values and reports -1 for
+    some absent enum-style blocks.  Reject those values before Home Assistant
+    can expose them as plausible states or write decisions based on them.
+    """
+    if value is None:
+        return False
+    if reg.data_type == DataType.TEXT:
+        return isinstance(value, str) and bool(value.strip())
+    if isinstance(value, bool):
+        return reg.data_type == DataType.BOOL
+    if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+        return False
+    if reg.data_type in (DataType.INT16, DataType.UINT16) and value in (-32768, 32767):
+        return False
+    if reg.data_type == DataType.INT32 and value in (-2147483648, 2147483647):
+        return False
+    # The controller can report a frost-protection target below the writable
+    # setpoint range. Number-entity write limits are not readback limits.
+    if reg.name.startswith("hk") and reg.name.endswith("_desiredtemp"):
+        return True
+    if reg.min_value is not None and value < reg.min_value:
+        return False
+    if reg.max_value is not None and value > reg.max_value:
+        return False
+    if reg.name.startswith("hk") and reg.name.endswith("_type"):
+        return value in (0, 1, 2, 3, 4)
+    if reg.name.startswith("hk") and reg.name.endswith("_mode"):
+        return value in (0, 1, 2, 3)
+    if reg.name == "sys_kue_puffer":
+        return value in (0, 1)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -92,20 +133,23 @@ def _hk_registers_l1(n: int) -> list[RegisterDef]:
     level = Level.L1 if n <= 2 else Level.L2
     return [
         RegisterDef(f"hk{n}_type",        base + 0,  SLAVE_HSM, DataType.INT16,   level=level, hk_index=n,
-                    description="Heizkreistyp (0=AUS, 1=FUSSBODEN, 2=HEIZKÖRPER, 3=POOL)"),
+                    description="Heizkreistyp (0=KEINER, 1=UNGEREGELT, 2=RUECKLAUF, 3=GEMISCHT, 4=CUBE_DIREKT nur HK1)"),
         RegisterDef(f"hk{n}_pv_plus",     base + 1,  SLAVE_HSM, DataType.INT16,   level=level, hk_index=n,
+                    writable=True, min_value=0, max_value=25,
                     unit="K", description="Kelvin-Offset auf Solltemp bei PV-Status Erhöhen"),
         RegisterDef(f"hk{n}_pv_minus",    base + 2,  SLAVE_HSM, DataType.INT16,   level=level, hk_index=n,
+                    writable=True, min_value=-25, max_value=0,
                     unit="K", description="Kelvin-Offset auf Solltemp bei PV-Status Reduzieren"),
         RegisterDef(f"hk{n}_desiredtemp", base + 3,  SLAVE_HSM, DataType.FLOAT32, level=level, hk_index=n,
-                    writable=(n <= 2), unit="°C", min_value=10.0, max_value=75.0,
+                    writable=(n <= 2), unit="°C",
+                    min_value=10.0 if n <= 2 else None, max_value=75.0 if n <= 2 else None,
                     description="Heizkreis Solltemperatur (RW für HK1/2, RO für HK3/4)"),
         RegisterDef(f"hk{n}_actualvalue", base + 5,  SLAVE_HSM, DataType.FLOAT32, level=level, hk_index=n,
                     unit="°C", description="Heizkreis Ist-Vorlauftemperatur"),
         RegisterDef(f"hk{n}_mode",        base + 7,  SLAVE_HSM, DataType.INT16,   level=level, hk_index=n,
                     writable=True, description="Betriebsmodus (0=AUS, 1=AUTOMATIK, 2=WINTER, 3=SOMMER)"),
         RegisterDef(f"hk{n}_raumsoll_hz", base + 8,  SLAVE_HSM, DataType.FLOAT32, level=level, hk_index=n,
-                    writable=True, unit="°C", min_value=10.0, max_value=30.0,
+                    writable=True, unit="°C", min_value=0.0, max_value=50.0,
                     description="Raumsolltemperatur Heizbetrieb"),
     ]
 
@@ -116,16 +160,18 @@ def _hk_registers_l2_ext(n: int) -> list[RegisterDef]:
     return [
         RegisterDef(f"hk{n}_raumsoll_kue",   base + 0,  SLAVE_HSM, DataType.FLOAT32, level=Level.L2,
                     writable=True, requires_cooling=True, hk_index=n,
-                    unit="°C", min_value=16.0, max_value=30.0,
+                    unit="°C", min_value=0.0, max_value=50.0,
                     description="Raumsolltemperatur Kühlbetrieb"),
-        RegisterDef(f"hk{n}_actualroomtemp", base + 2,  SLAVE_HSM, DataType.FLOAT32, level=Level.L2,
+        RegisterDef(f"hk{n}_actualroomtemp", base + 2,  SLAVE_HSM, DataType.FLOAT32, level=Level.L1 if n == 1 else Level.L2,
                     hk_index=n, unit="°C", description="Aktuell gemessene Raumtemperatur"),
         RegisterDef(f"hk{n}_urlaub",         base + 4,  SLAVE_HSM, DataType.INT16,   level=Level.L2,
                     writable=True, hk_index=n, description="Urlaubsmodus (0=AUS, 1=EIN)"),
         RegisterDef(f"hk{n}_tvl_urlaub_hz",  base + 5,  SLAVE_HSM, DataType.INT16,   level=Level.L2,
+                    min_value=0, max_value=50,
                     writable=True, hk_index=n, unit="°C",
                     description="Vorlaufsollwert Urlaub Heizbetrieb"),
         RegisterDef(f"hk{n}_tvl_urlaub_kue", base + 6,  SLAVE_HSM, DataType.INT16,   level=Level.L2,
+                    min_value=0, max_value=50,
                     writable=True, requires_cooling=True, hk_index=n, unit="°C",
                     description="Vorlaufsollwert Urlaub Kühlbetrieb"),
         RegisterDef(f"hk{n}_fix_mode",       base + 7,  SLAVE_HSM, DataType.INT16,   level=Level.L2,
@@ -139,7 +185,7 @@ def _hk_registers_l2_ext(n: int) -> list[RegisterDef]:
                     min_value=0.0, max_value=100.0,
                     description="Fixwert Kühlen (nur im FIX_KUEHLEN-Mode aktiv)"),
         RegisterDef(f"hk{n}_at_heizgrenze",  base + 10, SLAVE_HSM, DataType.FLOAT32, level=Level.L2,
-                    writable=True, hk_index=n, unit="°C", min_value=5.0, max_value=25.0,
+                    writable=True, hk_index=n, unit="°C", min_value=0.0, max_value=100.0,
                     description="Außentemperatur-Heizgrenze: ab hier kein Heizbetrieb"),
     ]
 
@@ -148,6 +194,10 @@ def _wpm_registers_l1(wpm_idx: int) -> list[RegisterDef]:
     """Level 1 WPM registers (same set for each WPM, slave = 111 + wpm_idx - 1)."""
     slave = SLAVE_WPM_BASE + wpm_idx - 1
     return [
+        RegisterDef(f"wpm{wpm_idx}_sys_type", 56000, slave, DataType.TEXT,
+                    register_count=10, description="Kurzbezeichnung Wärmepumpe"),
+        RegisterDef(f"wpm{wpm_idx}_anfsoll", 56020, slave, DataType.INT16,
+                    unit="%", description="Anforderung an Wärmepumpe in Prozent"),
         RegisterDef(f"wpm{wpm_idx}_aufnahmeleistung",  56021, slave, DataType.FLOAT32, level=Level.L1,
                     unit="W", scale=1000.0, description="Aufnahmeleistung WP"),
         RegisterDef(f"wpm{wpm_idx}_waermeleistung",    56023, slave, DataType.FLOAT32, level=Level.L1,
@@ -207,14 +257,20 @@ def _wpm_registers_l3(wpm_idx: int) -> list[RegisterDef]:
 # ---------------------------------------------------------------------------
 
 HSM_REGISTERS: list[RegisterDef] = [
+    RegisterDef("sys_type", 56000, SLAVE_HSM, DataType.TEXT,
+                register_count=10, description="Kurzbezeichnung"),
+    RegisterDef("sys_ww", 55003, SLAVE_HSM, DataType.INT16,
+                min_value=0, max_value=1, description="Warmwasser installiert"),
+    RegisterDef("sys_puffer", 55020, SLAVE_HSM, DataType.INT16,
+                min_value=0, max_value=2, description="Heizpuffer (0=NEIN, 1=PUFFER, 2=CUBESPEICHER)"),
     # --- WW Registers (Level 1) ---
     RegisterDef("ww_switch_on",     55000, SLAVE_HSM, DataType.INT16,   writable=True,
                 description="WW-Hauptschalter (0=AUS, 1=EIN)"),
     RegisterDef("ww_soll",          55001, SLAVE_HSM, DataType.INT16,   writable=True,
-                unit="°C", min_value=10.0, max_value=62.0,
+                unit="°C", min_value=0.0, max_value=62.0,
                 description="WW-Speichersollwert (aktiv geschriebener Sollwert)"),
     RegisterDef("ww_soll_pv",       55002, SLAVE_HSM, DataType.INT16,   writable=True,
-                unit="°C", min_value=10.0, max_value=67.0,
+                unit="°C", min_value=0.0, max_value=67.0,
                 description="WW-Sollwert bei PV-Status Erhöhen"),
     RegisterDef("ww_desiredtemp",   55004, SLAVE_HSM, DataType.FLOAT32,
                 unit="°C", description="WW-Soll aktiv (read-back, float)"),
@@ -260,11 +316,14 @@ HSM_REGISTERS: list[RegisterDef] = [
     RegisterDef("ems_bat_soc",      55071, SLAVE_HSM, DataType.INT16,   writable=True,
                 unit="%", min_value=0.0, max_value=100.0,
                 description="Batterie-SOC Vorgabe an MIRA"),
-    RegisterDef("ems_grid_power",   55072, SLAVE_HSM, DataType.INT16,   writable=True,
+    RegisterDef("ems_grid_power",   55072, SLAVE_HSM, DataType.INT32,   writable=True,
+                min_value=-2147483647, max_value=2147483646,
                 unit="W", description="Netzbezug/-einspeisung Vorgabe (positiv=Bezug)"),
-    RegisterDef("ems_wr_power",     55073, SLAVE_HSM, DataType.INT16,   writable=True,
+    RegisterDef("ems_wr_power",     55074, SLAVE_HSM, DataType.INT32,   writable=True,
+                min_value=-2147483647, max_value=2147483646,
                 unit="W", description="WR-Leistung Vorgabe"),
-    RegisterDef("ems_target_power", 55074, SLAVE_HSM, DataType.INT16,   writable=True,
+    RegisterDef("ems_target_power", 55076, SLAVE_HSM, DataType.INT32,   writable=True,
+                min_value=-2147483647, max_value=2147483646,
                 unit="W", description="Zielleistung Vorgabe an MIRA"),
 
     # --- EMS PV Enable Status (Level 2, RO) ---
@@ -297,7 +356,8 @@ HSM_REGISTERS: list[RegisterDef] = [
                 requires_cooling=True, description="Kühlanforderung an Kaskade"),
 
     # --- System (Level 2) ---
-    RegisterDef("sys_snrkey",        56010, SLAVE_HSM, DataType.INT16,  level=Level.L2,
+    RegisterDef("sys_snrkey",        56010, SLAVE_HSM, DataType.TEXT,  level=Level.L2,
+                register_count=10,
                 description="Seriennummer Key"),
 
     # --- Außentemperatur (Level 1) ---
@@ -407,16 +467,23 @@ def build_register_list(
         if hk_level > level:
             continue
         regs.extend(_hk_registers_l1(n))
-        if level >= Level.L2:
-            for reg in _hk_registers_l2_ext(n):
-                # Per-HK cooling registers: gated by whether this HK can cool
-                if reg.requires_cooling and n not in hk_cooling_set:
-                    continue
-                regs.append(reg)
+        for reg in _hk_registers_l2_ext(n):
+            if reg.level > level:
+                continue
+            # Per-HK cooling registers: gated by whether this HK can cool
+            if reg.requires_cooling and n not in hk_cooling_set:
+                continue
+            regs.append(reg)
 
     # WPM registers
     for wpm in range(1, min(num_wpm, 8) + 1):
         regs.extend(_wpm_registers_l1(wpm))
+        if level >= Level.L2:
+            regs.append(RegisterDef(
+                f"wpm{wpm}_sys_snrkey", 56010, SLAVE_WPM_BASE + wpm - 1,
+                DataType.TEXT, level=Level.L2, register_count=10,
+                description="Seriennummer Wärmepumpe",
+            ))
         if level >= Level.L3:
             regs.extend(_wpm_registers_l3(wpm))
 
@@ -424,8 +491,14 @@ def build_register_list(
 
 
 # HK type options
-HK_TYPE_OPTIONS = ["AUS", "Fußbodenheizung", "Heizkörper", "Pool"]
-HK_TYPE_LABELS: dict[int, str] = {0: "AUS", 1: "Fußbodenheizung", 2: "Heizkörper", 3: "Pool"}
+HK_TYPE_OPTIONS = ["Keiner", "Ungeregelt", "Rücklauf", "Gemischt", "Cube direkt"]
+HK_TYPE_LABELS: dict[int, str] = dict(enumerate(HK_TYPE_OPTIONS))
+
+
+def hk_type_labels(hk_index: int) -> dict[int, str]:
+    """Return configuration labels; Cube direkt is supported only by HK1."""
+    return {code: label for code, label in HK_TYPE_LABELS.items()
+            if code != 4 or hk_index == 1}
 
 # ---------------------------------------------------------------------------
 # WPM_STATUS code names (Level 3)

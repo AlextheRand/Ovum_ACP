@@ -68,11 +68,17 @@ Anzahl der konfigurierten Heizkreise (1–4). Steht in der Dokumentation deiner 
 
 ### Schritt 4 — Heizkreis-Typen
 
-Pro Heizkreis den Typ auswählen:
-- **Fußbodenheizung** — Niedertemperatur, flache Heizkurve
-- **Heizkörper** — Hochtemperatur, steilere Heizkurve
-- **Pool**
-- **AUS** — Heizkreis deaktiviert
+Pro Heizkreis den Reglertyp laut Ovum-Registertabelle auswählen:
+
+- **0 – Keiner:** kein Heizkreis.
+- **1 – Ungeregelt:** Heizkreispumpe folgt dem Heiz-/Kühlstatus.
+- **2 – Rücklauf:** zusätzlich Regelung anhand des Rücklauffühlers.
+- **3 – Gemischt:** zusätzlich Regelung des Heizkreismischers.
+- **4 – Cube direkt:** ausschließlich für HK1.
+
+Die früheren Beschriftungen „Fußbodenheizung/Heizkörper/Pool“ waren keine
+korrekte Übersetzung dieser Modbus-Codes. Die Auswahl in der Integration
+schreibt keinen Heizkreistyp in die Wärmepumpe; `HK*_TYPE` ist Read-only.
 
 ### Schritt 5 — Kühlung
 
@@ -112,11 +118,14 @@ Nach der Einrichtung erscheinen automatisch Sensoren und Steuerelemente unter de
 | HK2 Modus | Auswahl | Heizkreis 2 umschalten |
 | EMS PV-Status | Auswahl | PV-Überschuss-Signal: Neutral / Erhöhen / Reduzieren |
 
-> **Hinweis:** Nicht alle Sensoren sind bei jeder Anlage verkabelt. Sensoren ohne physischen Fühler zeigen den Status **Nicht verfügbar** — das ist kein Fehler.
+> **Hinweis:** **Nicht verfügbar** bedeutet, dass kein gültiger Modbus-Wert vorliegt. Das allein beweist weder einen defekten noch einen fehlenden Fühler.
 
 ---
 
 ## Häufige Probleme
+
+Details zu Registerkorrekturen und verbleibenden Dokumentationsfragen:
+[Registerabgleich Start/Plus vom 2026-06-01](docs/register-audit-2026-06-01.md).
 
 **Integration wird nicht gefunden / "Verbindung fehlgeschlagen"**
 - Prüfen ob die IP-Adresse korrekt ist (am Router nachschauen oder am MIRA-Display)
@@ -128,7 +137,10 @@ Nach der Einrichtung erscheinen automatisch Sensoren und Steuerelemente unter de
 - Standardwert ist meist `1` oder `0`
 
 **Sensor zeigt "Nicht verfügbar"**
-- Der Temperaturfühler an dieser Position ist nicht angeschlossen — normal bei teilbestückten Anlagen
+- Mögliche Ursachen sind ein nicht angeschlossener Fühler, eine nicht aktivierte Funktion, fehlende Modbus-Freigabe oder Kommunikationsprobleme. Die Ursache muss an der Anlage geprüft werden.
+- Ungültige Geräteantworten wie `NaN`, `32767` oder `-1` bei Heizkreis-Typ/Modus werden nicht als nutzbare Zustände ausgegeben.
+- Die Auswahl von Level 2/3 in der Integration aktiviert keine entsprechende Freigabe in der Wärmepumpe.
+- Ein gültiger Heizkreis-Sollwert von beispielsweise 5 °C (Frostschutz) bleibt sichtbar, auch wenn er unterhalb des manuell einstellbaren Bereichs liegt.
 
 ---
 

@@ -6,44 +6,45 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from custom_components.ovum_mira.config_flow import _test_connection
-from custom_components.ovum_mira.const import Level
+from custom_components.ovum_acp.config_flow import _test_connection
+from custom_components.ovum_acp.const import Level
 
-from .conftest import TEST_HOST, TEST_PORT, make_mock_modbus_result
+from .conftest import TEST_HOST, TEST_LOGIN_CODE, TEST_PORT, make_mock_modbus_result
 
 
 @pytest.mark.asyncio
 async def test_connection_success() -> None:
-    with patch("custom_components.ovum_mira.config_flow.AsyncModbusTcpClient") as mock_cls:
+    with patch("custom_components.ovum_acp.config_flow.AsyncModbusTcpClient") as mock_cls:
         client = AsyncMock()
         client.connect = AsyncMock(return_value=True)
         client.write_registers = AsyncMock(return_value=make_mock_modbus_result([]))
         client.close = lambda: None
         mock_cls.return_value = client
-        result = await _test_connection(TEST_HOST, TEST_PORT)
+        result = await _test_connection(TEST_HOST, TEST_PORT, TEST_LOGIN_CODE)
         assert result is None
+        assert client.write_registers.call_args.args[1] == [1, 57920]
 
 
 @pytest.mark.asyncio
 async def test_connection_refused() -> None:
-    with patch("custom_components.ovum_mira.config_flow.AsyncModbusTcpClient") as mock_cls:
+    with patch("custom_components.ovum_acp.config_flow.AsyncModbusTcpClient") as mock_cls:
         client = AsyncMock()
         client.connect = AsyncMock(return_value=False)
         client.close = lambda: None
         mock_cls.return_value = client
-        result = await _test_connection(TEST_HOST, TEST_PORT)
+        result = await _test_connection(TEST_HOST, TEST_PORT, TEST_LOGIN_CODE)
         assert result == "cannot_connect"
 
 
 @pytest.mark.asyncio
 async def test_login_failed() -> None:
-    with patch("custom_components.ovum_mira.config_flow.AsyncModbusTcpClient") as mock_cls:
+    with patch("custom_components.ovum_acp.config_flow.AsyncModbusTcpClient") as mock_cls:
         client = AsyncMock()
         client.connect = AsyncMock(return_value=True)
         client.write_registers = AsyncMock(return_value=make_mock_modbus_result([], is_error=True))
         client.close = lambda: None
         mock_cls.return_value = client
-        result = await _test_connection(TEST_HOST, TEST_PORT)
+        result = await _test_connection(TEST_HOST, TEST_PORT, TEST_LOGIN_CODE)
         assert result == "login_failed"
 
 
