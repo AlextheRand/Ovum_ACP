@@ -133,6 +133,7 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         self._client: AsyncModbusTcpClient | None = None
         self._last_login: datetime | None = None
+        self._connection_generation = 0
         self._lock = asyncio.Lock()
         self._failed_read_batches: set[tuple[int, int, int, int]] = set()
 
@@ -148,16 +149,28 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _ensure_connected(self) -> None:
         if self._client is None or not self._client.connected:
-            self._client = AsyncModbusTcpClient(self._host, port=self._port)
+            if self._client is not None:
+                self._client.close()
+            self._client = AsyncModbusTcpClient(
+                self._host, port=self._port, trace_connect=self._connection_changed,
+            )
             connected = await self._client.connect()
             if not connected:
                 raise UpdateFailed(f"Cannot connect to MIRA at {self._host}:{self._port}")
             self._last_login = None  # Force re-login after reconnect
 
+    def _connection_changed(self, connected: bool) -> None:
+        """Invalidate session authentication, including pymodbus auto-reconnects."""
+        self._connection_generation += 1
+        self._last_login = None
+        _LOGGER.debug("MIRA connection changed: connected=%s", connected)
+
     async def _login(self) -> None:
         """Send FC16 login to all required slaves."""
         if self._client is None:
-            return
+            raise UpdateFailed("No client for MIRA login")
+        self._last_login = None
+        generation = self._connection_generation
         slaves_to_login = [SLAVE_HSM] + [
             SLAVE_WPM_BASE + i for i in range(self._num_wpm)
         ]
@@ -168,6 +181,8 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if result.isError():
                 raise UpdateFailed(f"Login FC16 failed on slave {slave}: {result}")
         await asyncio.sleep(0.5)
+        if generation != self._connection_generation or not self._client.connected:
+            raise UpdateFailed("MIRA connection changed during login; retry on next update")
         self._last_login = datetime.now()
         _LOGGER.debug("MIRA login successful (%d slaves)", len(slaves_to_login))
 
@@ -270,15 +285,23 @@ class OvumMiraCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_setup(self) -> None:
         async with self._lock:
             await self._ensure_connected()
-            await self._login()
 
     async def _async_update_data(self) -> dict[str, Any]:
         async with self._lock:
             try:
-                await self._ensure_connected()
-                if self._needs_relogin():
+                # Login is volatile and scoped to the TCP session. Refresh it
+                # before every poll so display-side Plus activation also takes
+                # effect on an existing connection. This writes only the login
+                # register, never a persistent setting or heating setpoint.
+                for attempt in range(2):
+                    await self._ensure_connected()
                     await self._login()
-                return await self._read_all()
+                    data = await self._read_all()
+                    if self._last_login is not None:
+                        return data
+                    if attempt == 0:
+                        _LOGGER.info("MIRA reconnected during read; logging in and reading again")
+                raise UpdateFailed("MIRA connection repeatedly changed during read")
             except UpdateFailed:
                 raise
             except Exception as exc:

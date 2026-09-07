@@ -96,6 +96,7 @@ def coordinator(mock_entry, mock_modbus_client):
     coord._cooling = MOCK_CONFIG_DATA["cooling"]
     coord._client = mock_modbus_client
     coord._last_login = None
+    coord._connection_generation = 0
     coord._login_payload = [TEST_LOGIN_CODE >> 16, TEST_LOGIN_CODE & 0xFFFF]
     import asyncio
     coord._lock = asyncio.Lock()
@@ -257,3 +258,128 @@ async def test_reconnect_on_disconnected_client(coordinator, mock_modbus_client)
         mock_cls.return_value = new_client
         await coordinator._ensure_connected()
         assert coordinator._last_login is None  # reset on reconnect
+        mock_cls.assert_called_once_with(
+            coordinator._host, port=coordinator._port,
+            trace_connect=coordinator._connection_changed,
+        )
+        mock_modbus_client.close.assert_called_once()
+
+
+async def test_each_poll_refreshes_plus_access(
+    coordinator: OvumMiraCoordinator, mock_modbus_client: AsyncMock,
+) -> None:
+    """Display-side activation becomes readable without reloading the integration."""
+    from datetime import datetime
+
+    coordinator._last_login = datetime.now()
+    authenticated = False
+
+    async def login(
+        address: int, values: list[int], *, device_id: int,
+    ) -> MagicMock:
+        nonlocal authenticated
+        authenticated = True
+        return make_mock_modbus_result([])
+
+    def read(addr: int, count: int, device_id: int) -> MagicMock:
+        words = [0] * count
+        if device_id == SLAVE_HSM and addr <= 55022 < addr + count:
+            words[55022 - addr] = 1 if authenticated else 32767
+        return make_mock_modbus_result(words)
+
+    mock_modbus_client.write_registers.side_effect = login
+    mock_modbus_client.read_holding_registers.side_effect = read
+    for _ in range(2):
+        authenticated = False
+        data = await coordinator._async_update_data()
+        assert data["hpuf_status"] == 1
+    assert mock_modbus_client.write_registers.await_count == 4
+    assert all(c.args[0] == 101 for c in mock_modbus_client.write_registers.call_args_list)
+    mock_modbus_client.write_register.assert_not_called()
+
+
+async def test_auto_reconnect_invalidates_login_before_write(
+    coordinator: OvumMiraCoordinator, mock_modbus_client: AsyncMock,
+) -> None:
+    await coordinator._login()
+    mock_modbus_client.write_registers.reset_mock()
+    coordinator._connection_changed(False)
+    coordinator._connection_changed(True)
+    assert coordinator._needs_relogin()
+    await coordinator.async_write_int16(SLAVE_HSM, 55001, 45)
+    assert mock_modbus_client.write_registers.await_count == 2
+
+
+async def test_reconnect_during_read_discards_unauthenticated_data(
+    coordinator: OvumMiraCoordinator,
+) -> None:
+    calls = 0
+
+    async def read() -> dict[str, int]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            coordinator._connection_changed(False)
+            coordinator._connection_changed(True)
+            return {"hpuf_status": 32767}
+        return {"hpuf_status": 1}
+
+    coordinator._read_all = AsyncMock(side_effect=read)
+    assert await coordinator._async_update_data() == {"hpuf_status": 1}
+    assert calls == 2
+
+
+async def test_repeated_reconnect_is_bounded(
+    coordinator: OvumMiraCoordinator,
+) -> None:
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    async def read() -> dict[str, int]:
+        coordinator._connection_changed(False)
+        coordinator._connection_changed(True)
+        return {"hpuf_status": 32767}
+
+    coordinator._read_all = AsyncMock(side_effect=read)
+    with pytest.raises(UpdateFailed, match="repeatedly changed"):
+        await coordinator._async_update_data()
+    assert coordinator._read_all.await_count == 2
+
+
+async def test_reconnect_during_login_cannot_authenticate_new_session(
+    coordinator: OvumMiraCoordinator, mock_modbus_client: AsyncMock,
+) -> None:
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    async def login(
+        address: int, values: list[int], *, device_id: int,
+    ) -> MagicMock:
+        coordinator._connection_changed(False)
+        coordinator._connection_changed(True)
+        return make_mock_modbus_result([])
+
+    mock_modbus_client.write_registers.side_effect = login
+    with pytest.raises(UpdateFailed, match="during login"):
+        await coordinator._login()
+    assert coordinator._last_login is None
+
+
+async def test_failed_login_prevents_reading(
+    coordinator: OvumMiraCoordinator, mock_modbus_client: AsyncMock,
+) -> None:
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    mock_modbus_client.write_registers.return_value = make_mock_modbus_result([], is_error=True)
+    with pytest.raises(UpdateFailed, match="Login FC16 failed"):
+        await coordinator._async_update_data()
+    mock_modbus_client.read_holding_registers.assert_not_called()
+    assert coordinator._last_login is None
+
+
+async def test_authenticated_missing_sensor_does_not_trigger_retry(
+    coordinator: OvumMiraCoordinator,
+) -> None:
+    coordinator._read_all = AsyncMock(return_value={"hk3_actualvalue": float("nan")})
+    data = await coordinator._async_update_data()
+    import math
+    assert math.isnan(data["hk3_actualvalue"])
+    coordinator._read_all.assert_awaited_once()

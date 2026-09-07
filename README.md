@@ -140,6 +140,11 @@ Details zu Registerkorrekturen und verbleibenden Dokumentationsfragen:
 - Mögliche Ursachen sind ein nicht angeschlossener Fühler, eine nicht aktivierte Funktion, fehlende Modbus-Freigabe oder Kommunikationsprobleme. Die Ursache muss an der Anlage geprüft werden.
 - Ungültige Geräteantworten wie `NaN`, `32767` oder `-1` bei Heizkreis-Typ/Modus werden nicht als nutzbare Zustände ausgegeben.
 - Die Auswahl von Level 2/3 in der Integration aktiviert keine entsprechende Freigabe in der Wärmepumpe.
+- Ab 0.4.3 wird der hinterlegte Modbus-Zugang vor jedem Abruf neu angemeldet.
+  Dadurch werden nachträgliche Plus-Freischaltungen am Display automatisch übernommen.
+  Automatische TCP-Wiederverbindungen verwerfen die alte Anmeldung; bei einem
+  Verbindungswechsel während des Lesens wird einmal neu angemeldet und erneut gelesen.
+  Dabei werden ausschließlich flüchtige Anmelderegister geschrieben, keine Sollwerte.
 - Ein gültiger Heizkreis-Sollwert von beispielsweise 5 °C (Frostschutz) bleibt sichtbar, auch wenn er unterhalb des manuell einstellbaren Bereichs liegt.
 
 ---
