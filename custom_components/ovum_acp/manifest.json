@@ -1,11 +1,13 @@
 {
   "domain": "ovum_acp",
   "name": "Ovum ACP",
-  "version": "0.4.3",
-  "requirements": [],
-  "iot_class": "local_polling",
+  "codeowners": [
+    "@AlextheRand"
+  ],
   "config_flow": true,
-  "codeowners": ["@AlextheRand"],
   "documentation": "https://github.com/AlextheRand/Ovum_ACP",
-  "issue_tracker": "https://github.com/AlextheRand/Ovum_ACP/issues"
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/AlextheRand/Ovum_ACP/issues",
+  "requirements": [],
+  "version": "0.4.3"
 }

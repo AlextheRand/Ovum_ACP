@@ -162,4 +162,5 @@ Andere Ovum-Modelle ohne LSM-Display oder ohne Modbus TCP werden **nicht** unter
 
 ## Lizenz
 
-MIT — kostenlos nutzbar, keine Garantie, kein offizieller Ovum-Support.
+MIT ([LICENSE](LICENSE)): kostenlos nutzbar, keine Garantie, kein offizieller Ovum-Support.
+Das Integrations-Icon ist eine eigene neutrale Grafik und kein Ovum-Logo.
