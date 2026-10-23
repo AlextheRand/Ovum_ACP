@@ -59,18 +59,7 @@
           "hk3_cooling": "Heating Circuit 3 — cooling capable",
           "hk4_cooling": "Heating Circuit 4 — cooling capable"
         }
-      }
-    },
-    "error": {
-      "cannot_connect": "Cannot connect to MIRA. Check IP address and port.",
-      "login_failed": "Connected but Modbus login failed. Verify your Modbus cable and access level."
-    },
-    "abort": {
-      "already_configured": "This MIRA device is already configured."
-    }
-  },
-  "reconfigure": {
-    "step": {
+      },
       "reconfigure": {
         "title": "Connection",
         "description": "Update the connection settings. Changes take effect after saving.",
@@ -83,11 +72,15 @@
       },
       "reconfigure_license": {
         "title": "License Level",
-        "data": { "level": "Modbus Access Level" }
+        "data": {
+          "level": "Modbus Access Level"
+        }
       },
       "reconfigure_ww_type": {
         "title": "Domestic Hot Water",
-        "data": { "ww_internal": "Internal fresh water station" }
+        "data": {
+          "ww_internal": "Internal fresh water station"
+        }
       },
       "reconfigure_hk_count": {
         "title": "Heating Circuits",
@@ -107,7 +100,9 @@
       },
       "reconfigure_cooling": {
         "title": "Cooling",
-        "data": { "cooling": "Active cooling enabled" }
+        "data": {
+          "cooling": "Active cooling enabled"
+        }
       },
       "reconfigure_hk_cooling_capable": {
         "title": "Heating Circuits with Cooling",
@@ -120,7 +115,12 @@
         }
       }
     },
+    "error": {
+      "cannot_connect": "Cannot connect to MIRA. Check IP address and port.",
+      "login_failed": "Connected but Modbus login failed. Verify your Modbus cable and access level."
+    },
     "abort": {
+      "already_configured": "This MIRA device is already configured.",
       "reconfigure_successful": "Configuration updated successfully."
     }
   },

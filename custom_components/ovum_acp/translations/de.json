@@ -59,18 +59,7 @@
           "hk3_cooling": "Heizkreis 3 — Kühlbetrieb möglich",
           "hk4_cooling": "Heizkreis 4 — Kühlbetrieb möglich"
         }
-      }
-    },
-    "error": {
-      "cannot_connect": "Verbindung zur MIRA nicht möglich. IP-Adresse und Port prüfen.",
-      "login_failed": "Verbindung hergestellt, aber Modbus-Login fehlgeschlagen. Modbus-Kabel und Lizenzlevel prüfen."
-    },
-    "abort": {
-      "already_configured": "Diese MIRA ist bereits konfiguriert."
-    }
-  },
-  "reconfigure": {
-    "step": {
+      },
       "reconfigure": {
         "title": "Verbindung",
         "description": "Verbindungseinstellungen ändern. Änderungen werden nach dem Speichern aktiv.",
@@ -83,11 +72,15 @@
       },
       "reconfigure_license": {
         "title": "Lizenzlevel",
-        "data": { "level": "Modbus-Zugangslevel" }
+        "data": {
+          "level": "Modbus-Zugangslevel"
+        }
       },
       "reconfigure_ww_type": {
         "title": "Warmwasserversorgung",
-        "data": { "ww_internal": "Interne Frischwasserstation" }
+        "data": {
+          "ww_internal": "Interne Frischwasserstation"
+        }
       },
       "reconfigure_hk_count": {
         "title": "Heizkreise und WPM-Module",
@@ -107,7 +100,9 @@
       },
       "reconfigure_cooling": {
         "title": "Kühlbetrieb",
-        "data": { "cooling": "Aktiver Kühlbetrieb aktiviert" }
+        "data": {
+          "cooling": "Aktiver Kühlbetrieb aktiviert"
+        }
       },
       "reconfigure_hk_cooling_capable": {
         "title": "Heizkreise für Kühlbetrieb",
@@ -120,7 +115,12 @@
         }
       }
     },
+    "error": {
+      "cannot_connect": "Verbindung zur MIRA nicht möglich. IP-Adresse und Port prüfen.",
+      "login_failed": "Verbindung hergestellt, aber Modbus-Login fehlgeschlagen. Modbus-Kabel und Lizenzlevel prüfen."
+    },
     "abort": {
+      "already_configured": "Diese MIRA ist bereits konfiguriert.",
       "reconfigure_successful": "Konfiguration erfolgreich aktualisiert."
     }
   },
