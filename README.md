@@ -10,7 +10,7 @@ Diese Integration liest automatisch alle relevanten Sensordaten aus deiner Wärm
 
 ## Voraussetzungen
 
-- Home Assistant (empfohlen: 2024.1.0 oder neuer)
+- Home Assistant 2025.9.0 oder neuer (bringt pymodbus 3.10 oder neuer mit; die Integration nutzt dessen `device_id`-Schnittstelle)
 - HACS installiert ([Anleitung](https://hacs.xyz/docs/setup/download))
 - Ovum MIRA Wärmepumpe mit **LSM Display** und **Modbus TCP aktiviert**
 - Die Wärmepumpe muss im selben Netzwerk wie Home Assistant erreichbar sein

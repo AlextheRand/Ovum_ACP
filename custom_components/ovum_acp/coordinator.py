@@ -18,7 +18,7 @@ try:
 except ImportError as exc:
     raise ImportError(
         "pymodbus is required for ovum_acp. "
-        "It is bundled with HA's built-in modbus integration. "
+        "Home Assistant installs it from manifest.json (pymodbus>=3.10). "
         f"Original error: {exc}"
     ) from exc
 
