@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from enum import IntEnum, auto
 
 DOMAIN = "ovum_acp"
 MANUFACTURER = "Ovum"
 MODEL = "MIRA"
+# Object-ID prefix of the established entity IDs (device name "Ovum MIRA")
+ENTITY_ID_PREFIX = "ovum_mira"
 
 # Modbus defaults
 DEFAULT_HOST = "192.168.178.82"
@@ -540,4 +543,38 @@ WW_ANFSTATUS_NAMES: dict[int, str] = {
     4: "Sollwert",
     5: "Turbo",
     6: "Frost",
+}
+
+
+# ---------------------------------------------------------------------------
+# Entity names and translated code states
+# ---------------------------------------------------------------------------
+
+_INDEXED_NAME = re.compile(r"^(hk|wpm)(\d+)_(.+)$")
+
+
+def entity_translation(name: str) -> tuple[str, dict[str, str]]:
+    """Return translation key and name placeholders for a register name.
+
+    Registers of each heating circuit and heat pump share one translation:
+    ``hk2_type`` → (``hk_type``, {"hk": "2"}).
+    """
+    match = _INDEXED_NAME.match(name)
+    if match is None:
+        return name, {}
+    prefix, index, rest = match.groups()
+    return f"{prefix}_{rest}", {prefix: index}
+
+
+# Code registers exposed as enum sensors. The state stays the raw code, so
+# automations comparing numbers keep working; the frontend shows the
+# translation from entity.sensor.<key>.state.<code>.
+SENSOR_ENUM_CODES: dict[str, tuple[int, ...]] = {
+    "sys_ww": (0, 1),
+    "sys_puffer": (0, 1, 2),
+    "ww_fwsstsstatus": (0, 1, 2),
+    "hpuf_ladestatus": (0, 1, 2, 3, 4, 5),
+    "hk_type": (0, 1, 2, 3, 4),
+    # Code 2 is not documented; it stays a valid state without a text
+    "wpm_status": tuple(range(15)),
 }

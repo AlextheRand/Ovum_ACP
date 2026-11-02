@@ -146,6 +146,19 @@ Details zu Registerkorrekturen und verbleibenden Dokumentationsfragen:
   Verbindungswechsel während des Lesens wird einmal neu angemeldet und erneut gelesen.
   Dabei werden ausschließlich flüchtige Anmelderegister geschrieben, keine Sollwerte.
 - Ein gültiger Heizkreis-Sollwert von beispielsweise 5 °C (Frostschutz) bleibt sichtbar, auch wenn er unterhalb des manuell einstellbaren Bereichs liegt.
+- `Puffertemperatur oben` gibt es nur bei Anlagen mit zwei Pufferfühlern. Mit Cube-Speicher
+  oder nur einem Fühler bleibt der Sensor deshalb dauerhaft „Nicht verfügbar“.
+- `Systemname` (HSM) liefert bei manchen Anlagen keinen Text und bleibt dann ebenfalls
+  „Nicht verfügbar“; das hat keinen Einfluss auf die übrigen Werte.
+
+**Namen und Statuswerte (ab 0.4.4)**
+- Entitäten tragen Klartextnamen auf Deutsch oder Englisch (Systemsprache), z. B.
+  „WP 1 Status“ oder „Heizkreis 1 Typ“. Die Entitäts-IDs bleiben unverändert
+  (`sensor.ovum_mira_wpm1_status` usw.), auch bei Neuinstallationen.
+- Codewerte (WP-Status, Heizkreistyp, Heizpuffer, Warmwasser installiert,
+  Puffer-Ladestatus, Frischwasserstation) zeigt Home Assistant als Text an, z. B.
+  „Sperrzeit“ statt `3`. Der Zustand selbst bleibt die Zahl; bestehende
+  Automationen und Templates, die mit Codes vergleichen, funktionieren weiter.
 
 ---
 

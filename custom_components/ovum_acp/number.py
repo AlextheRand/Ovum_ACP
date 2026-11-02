@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 
+from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
@@ -42,6 +43,8 @@ async def async_setup_entry(
 
 class OvumMiraNumber(OvumMiraEntity, NumberEntity):
     """Number entity for a writable temperature or setpoint register."""
+
+    _entity_domain = NUMBER_DOMAIN
 
     def __init__(self, coordinator: OvumMiraCoordinator, reg: RegisterDef) -> None:
         super().__init__(coordinator, reg)

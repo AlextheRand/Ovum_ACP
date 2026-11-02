@@ -190,5 +190,393 @@
       "cannot_connect": "Verbindung zur MIRA nicht möglich. IP-Adresse und Port prüfen.",
       "login_failed": "Verbindung hergestellt, aber Modbus-Login fehlgeschlagen. Lizenzlevel prüfen."
     }
+  },
+  "entity": {
+    "binary_sensor": {
+      "biv_kaskhzanf": {
+        "name": "Kaskade Heizanforderung"
+      },
+      "biv_kaskkueanf": {
+        "name": "Kaskade Kühlanforderung"
+      },
+      "biv_kaskwwanf": {
+        "name": "Kaskade WW-Anforderung"
+      },
+      "has_fault": {
+        "name": "Störung"
+      },
+      "wpm_running": {
+        "name": "WP {wpm} Verdichter läuft"
+      },
+      "ww_zirkpump": {
+        "name": "Zirkulationspumpe"
+      }
+    },
+    "number": {
+      "ems_bat_soc": {
+        "name": "EMS Batterie-SOC"
+      },
+      "ems_grid_power": {
+        "name": "EMS Netzleistung"
+      },
+      "ems_target_power": {
+        "name": "EMS Soll-Leistung"
+      },
+      "ems_wr_power": {
+        "name": "EMS WR-Leistung"
+      },
+      "fws_soll": {
+        "name": "Frischwasser-Soll"
+      },
+      "hk_at_heizgrenze": {
+        "name": "Heizkreis {hk} Heizgrenze"
+      },
+      "hk_desiredtemp": {
+        "name": "Heizkreis {hk} Vorlauf-Soll"
+      },
+      "hk_fixwert_hz": {
+        "name": "Heizkreis {hk} Fixwert Heizen"
+      },
+      "hk_fixwert_kue": {
+        "name": "Heizkreis {hk} Fixwert Kühlen"
+      },
+      "hk_pv_minus": {
+        "name": "Heizkreis {hk} PV-Absenkung"
+      },
+      "hk_pv_plus": {
+        "name": "Heizkreis {hk} PV-Anhebung"
+      },
+      "hk_raumsoll_hz": {
+        "name": "Heizkreis {hk} Raum-Soll Heizen"
+      },
+      "hk_raumsoll_kue": {
+        "name": "Heizkreis {hk} Raum-Soll Kühlen"
+      },
+      "hk_tvl_urlaub_hz": {
+        "name": "Heizkreis {hk} Vorlauf Urlaub Heizen"
+      },
+      "hk_tvl_urlaub_kue": {
+        "name": "Heizkreis {hk} Vorlauf Urlaub Kühlen"
+      },
+      "hpuf_soll_pv": {
+        "name": "Puffer-Soll PV"
+      },
+      "ww_soll": {
+        "name": "WW-Soll"
+      },
+      "ww_soll_pv": {
+        "name": "WW-Soll PV"
+      }
+    },
+    "select": {
+      "ems_pvstatus": {
+        "name": "EMS-PV-Status"
+      },
+      "hk_fix_mode": {
+        "name": "Heizkreis {hk} Sollwertbildung"
+      },
+      "hk_mode": {
+        "name": "Heizkreis {hk} Betriebsart"
+      },
+      "hk_urlaub": {
+        "name": "Heizkreis {hk} Urlaubsmodus"
+      },
+      "ww_switch_on": {
+        "name": "WW-Hauptschalter"
+      }
+    },
+    "sensor": {
+      "aussentemperatur": {
+        "name": "Außentemperatur"
+      },
+      "biv_kaskhzanf": {
+        "name": "Kaskade Heizanforderung"
+      },
+      "biv_kaskkueanf": {
+        "name": "Kaskade Kühlanforderung"
+      },
+      "biv_kaskwwanf": {
+        "name": "Kaskade WW-Anforderung"
+      },
+      "hk_actualroomtemp": {
+        "name": "Heizkreis {hk} Raumtemperatur"
+      },
+      "hk_actualvalue": {
+        "name": "Heizkreis {hk} Vorlauf-Ist"
+      },
+      "hk_desiredtemp": {
+        "name": "Heizkreis {hk} Vorlauf-Soll"
+      },
+      "hk_type": {
+        "name": "Heizkreis {hk} Typ",
+        "state": {
+          "0": "Nicht installiert",
+          "1": "Ungeregelt",
+          "2": "Rücklauf",
+          "3": "Gemischt",
+          "4": "Cube direkt"
+        }
+      },
+      "hpuf_ladestatus": {
+        "name": "Puffer-Ladestatus",
+        "state": {
+          "0": "Unter Frostschutz",
+          "1": "Unter Einschaltpunkt",
+          "2": "Unter Sollwert",
+          "3": "Über Sollwert",
+          "4": "Über Sollwert + Hysterese",
+          "5": "Kein Puffer konfiguriert"
+        }
+      },
+      "hpuf_ladestatus_bms": {
+        "name": "Puffer-Ladestatus (BMS)"
+      },
+      "hpuf_puot_bms": {
+        "name": "Puffertemperatur oben (BMS)"
+      },
+      "hpuf_puut_bms": {
+        "name": "Puffertemperatur unten (BMS)"
+      },
+      "hpuf_solltemp": {
+        "name": "Puffer-Soll aktiv"
+      },
+      "hpuf_solltemp_bms": {
+        "name": "Puffer-Soll aktiv (BMS)"
+      },
+      "hpuf_status": {
+        "name": "Puffer-Betriebsart"
+      },
+      "hsm_error_status": {
+        "name": "HSM-Fehlerstatus"
+      },
+      "hsm_errorbits": {
+        "name": "Störungs-Bitfeld"
+      },
+      "hsm_errorcode_1": {
+        "name": "HSM-Fehlercode 1"
+      },
+      "hsm_errorcode_2": {
+        "name": "HSM-Fehlercode 2"
+      },
+      "hsm_errorcode_3": {
+        "name": "HSM-Fehlercode 3"
+      },
+      "hsm_errorcode_4": {
+        "name": "HSM-Fehlercode 4"
+      },
+      "hsm_lk_a_mode": {
+        "name": "Ladekreis A"
+      },
+      "hsm_lk_b_mode": {
+        "name": "Ladekreis B"
+      },
+      "hsm_lk_c_mode": {
+        "name": "Ladekreis C"
+      },
+      "hsm_lk_d_mode": {
+        "name": "Ladekreis D"
+      },
+      "hsm_pvenable_st2hz": {
+        "name": "PV-Freigabe Zusatzheizung Heizung"
+      },
+      "hsm_pvenable_st2ww": {
+        "name": "PV-Freigabe Zusatzheizung Warmwasser"
+      },
+      "hsm_pvenable_wphz": {
+        "name": "PV-Freigabe WP Heizung"
+      },
+      "hsm_pvenable_wpww": {
+        "name": "PV-Freigabe WP Warmwasser"
+      },
+      "hsm_pvstatus_bms": {
+        "name": "PV-Status intern"
+      },
+      "hsm_warningbits": {
+        "name": "Warnungs-Bitfeld"
+      },
+      "hsm_warningcode_1": {
+        "name": "HSM-Warncode 1"
+      },
+      "hsm_warningcode_2": {
+        "name": "HSM-Warncode 2"
+      },
+      "kpuf_ladestatus": {
+        "name": "Kühlpuffer-Ladestatus"
+      },
+      "kpuf_ladestatus_bms": {
+        "name": "Kühlpuffer-Ladestatus (BMS)"
+      },
+      "kpuf_puut": {
+        "name": "Kühlpuffer-Temperatur"
+      },
+      "kpuf_puut_bms": {
+        "name": "Kühlpuffer-Temperatur (BMS)"
+      },
+      "kpuf_solltemp": {
+        "name": "Kühlpuffer-Soll aktiv"
+      },
+      "kpuf_solltemp_bms": {
+        "name": "Kühlpuffer-Soll aktiv (BMS)"
+      },
+      "puffer_temp_oben": {
+        "name": "Puffertemperatur oben"
+      },
+      "puffer_temp_unten": {
+        "name": "Puffertemperatur unten"
+      },
+      "sys_kue_puffer": {
+        "name": "Separater Kühlpuffer"
+      },
+      "sys_puffer": {
+        "name": "Heizpuffer",
+        "state": {
+          "0": "Keiner",
+          "1": "Pufferspeicher",
+          "2": "Cube-Speicher"
+        }
+      },
+      "sys_snrkey": {
+        "name": "Seriennummer"
+      },
+      "sys_type": {
+        "name": "Systemname"
+      },
+      "sys_ww": {
+        "name": "Warmwasser installiert",
+        "state": {
+          "0": "Nein",
+          "1": "Ja"
+        }
+      },
+      "wpm_anfsoll": {
+        "name": "WP {wpm} Anforderung"
+      },
+      "wpm_aufnahmeleistung": {
+        "name": "WP {wpm} Aufnahmeleistung"
+      },
+      "wpm_austrittstemperatur": {
+        "name": "WP {wpm} Austrittstemperatur"
+      },
+      "wpm_betriebsstunden": {
+        "name": "WP {wpm} Betriebsstunden"
+      },
+      "wpm_co_pump": {
+        "name": "WP {wpm} Kondensatorpumpe"
+      },
+      "wpm_compressor_starts": {
+        "name": "WP {wpm} Verdichterstarts"
+      },
+      "wpm_cop": {
+        "name": "WP {wpm} COP"
+      },
+      "wpm_eev_pos": {
+        "name": "WP {wpm} EEV-Position"
+      },
+      "wpm_eintrittstemperatur": {
+        "name": "WP {wpm} Eintrittstemperatur"
+      },
+      "wpm_error_status": {
+        "name": "WP {wpm} Fehlerstatus"
+      },
+      "wpm_errorcode_1": {
+        "name": "WP {wpm} Fehlercode 1"
+      },
+      "wpm_errorcode_2": {
+        "name": "WP {wpm} Fehlercode 2"
+      },
+      "wpm_hgt": {
+        "name": "WP {wpm} Heißgastemperatur"
+      },
+      "wpm_ko_flow": {
+        "name": "WP {wpm} Volumenstrom"
+      },
+      "wpm_koat": {
+        "name": "WP {wpm} Kondensator-Austritt"
+      },
+      "wpm_koet": {
+        "name": "WP {wpm} Kondensator-Eintritt"
+      },
+      "wpm_rps": {
+        "name": "WP {wpm} Verdichterdrehzahl"
+      },
+      "wpm_sgt": {
+        "name": "WP {wpm} Sauggastemperatur"
+      },
+      "wpm_status": {
+        "name": "WP {wpm} Status",
+        "state": {
+          "0": "Störung",
+          "1": "Inverter offline",
+          "3": "Sperrzeit",
+          "4": "Ölvorheizen",
+          "5": "Bereit",
+          "6": "Start",
+          "7": "Warmwasser",
+          "8": "Heizen",
+          "9": "Kühlen",
+          "10": "Abtauen",
+          "11": "Manuell enteisen",
+          "12": "Stoppt",
+          "13": "Einsatzgrenze unterschritten",
+          "14": "Inverter-Reset"
+        }
+      },
+      "wpm_sys_snrkey": {
+        "name": "WP {wpm} Seriennummer"
+      },
+      "wpm_sys_type": {
+        "name": "WP {wpm} Bezeichnung"
+      },
+      "wpm_waermeleistung": {
+        "name": "WP {wpm} Wärmeleistung"
+      },
+      "wpm_warningcode_1": {
+        "name": "WP {wpm} Warncode 1"
+      },
+      "wpm_warningcode_2": {
+        "name": "WP {wpm} Warncode 2"
+      },
+      "wpm_wpm_status": {
+        "name": "WP {wpm} Status (BMS)"
+      },
+      "ww_actualtempo_bms": {
+        "name": "WW-Temperatur oben (BMS)"
+      },
+      "ww_actualtempu_bms": {
+        "name": "WW-Temperatur unten (BMS)"
+      },
+      "ww_anfstatus": {
+        "name": "WW-Anforderung"
+      },
+      "ww_anfstatus_bms": {
+        "name": "WW-Anforderung (BMS)"
+      },
+      "ww_desiredtemp": {
+        "name": "WW-Soll aktiv"
+      },
+      "ww_fwsstsstatus": {
+        "name": "Frischwasserstation Durchfluss",
+        "state": {
+          "0": "Keine Zapfung",
+          "1": "Standby-Volumenstrom",
+          "2": "Zapfung"
+        }
+      },
+      "ww_temp_oben": {
+        "name": "WW-Temperatur oben"
+      },
+      "ww_temp_unten": {
+        "name": "WW-Temperatur unten"
+      },
+      "ww_urlaub": {
+        "name": "WW-Urlaubsmodus"
+      },
+      "ww_zirkpump": {
+        "name": "Zirkulationspumpe"
+      },
+      "ww_zirkt": {
+        "name": "Zirkulationstemperatur"
+      }
+    }
   }
 }

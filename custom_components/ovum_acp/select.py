@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -12,11 +13,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    DataType,
     EMS_PV_STATUS_OPTIONS,
     HK_FIX_MODE_OPTIONS,
     HK_MODE_OPTIONS,
     HK_TYPE_OPTIONS,
+    DataType,
 )
 from .coordinator import OvumMiraCoordinator
 from .entity import OvumMiraEntity
@@ -62,6 +63,8 @@ async def async_setup_entry(
 
 class OvumMiraSelect(OvumMiraEntity, SelectEntity):
     """Select entity for a writable INT16 register with named options."""
+
+    _entity_domain = SELECT_DOMAIN
 
     def __init__(
         self, coordinator: OvumMiraCoordinator, reg: Any, options: list[str]

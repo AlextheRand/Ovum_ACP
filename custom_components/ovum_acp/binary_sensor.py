@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
+    DOMAIN as BINARY_SENSOR_DOMAIN,
+)
+from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
@@ -12,7 +15,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, DataType
+from .const import DOMAIN, ENTITY_ID_PREFIX, DataType
 from .coordinator import OvumMiraCoordinator
 from .entity import OvumMiraEntity
 
@@ -44,6 +47,8 @@ async def async_setup_entry(
 class OvumMiraBinarySensor(OvumMiraEntity, BinarySensorEntity):
     """Binary sensor for a BOOL register."""
 
+    _entity_domain = BINARY_SENSOR_DOMAIN
+
     @property
     def is_on(self) -> bool | None:
         raw = self._raw_value
@@ -62,6 +67,7 @@ class OvumMiraFaultSensor(CoordinatorEntity[OvumMiraCoordinator], BinarySensorEn
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_has_fault"
         self._attr_translation_key = "has_fault"
+        self.entity_id = f"{BINARY_SENSOR_DOMAIN}.{ENTITY_ID_PREFIX}_has_fault"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -86,6 +92,8 @@ class OvumMiraWpmRunningSensor(CoordinatorEntity[OvumMiraCoordinator], BinarySen
         self._wpm_idx = wpm_idx
         self._attr_unique_id = f"{DOMAIN}_wpm{wpm_idx}_running"
         self._attr_translation_key = "wpm_running"
+        self._attr_translation_placeholders = {"wpm": str(wpm_idx)}
+        self.entity_id = f"{BINARY_SENSOR_DOMAIN}.{ENTITY_ID_PREFIX}_wpm{wpm_idx}_running"
 
     @property
     def device_info(self) -> DeviceInfo:

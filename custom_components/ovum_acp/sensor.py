@@ -2,28 +2,42 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import Any
 
+from homeassistant.components.sensor import (
+    DOMAIN as SENSOR_DOMAIN,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature, UnitOfPower, UnitOfEnergy, UnitOfVolumeFlowRate, UnitOfTime
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+    UnitOfVolumeFlowRate,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    DataType,
-    RegisterDef,
+    SENSOR_ENUM_CODES,
     WPM_STATUS_NAMES,
     WW_ANFSTATUS_NAMES,
+    DataType,
+    RegisterDef,
 )
 from .coordinator import OvumMiraCoordinator
 from .entity import OvumMiraEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -50,7 +64,7 @@ _UNIT_DEVICE_CLASS: dict[str, tuple[str | None, SensorDeviceClass | None]] = {
     "W": (UnitOfPower.WATT, SensorDeviceClass.POWER),
     "kWh": (UnitOfEnergy.KILO_WATT_HOUR, SensorDeviceClass.ENERGY),
     "l/min": (UnitOfVolumeFlowRate.LITERS_PER_MINUTE, None),
-    "%": (None, None),
+    "%": (PERCENTAGE, None),
     "rps": (None, None),
     "h": (UnitOfTime.HOURS, SensorDeviceClass.DURATION),
     "min": (UnitOfTime.MINUTES, SensorDeviceClass.DURATION),
@@ -61,8 +75,16 @@ _UNIT_DEVICE_CLASS: dict[str, tuple[str | None, SensorDeviceClass | None]] = {
 class OvumMiraSensor(OvumMiraEntity, SensorEntity):
     """Sensor entity for a read-only (or read-back) Modbus register."""
 
+    _entity_domain = SENSOR_DOMAIN
+
     def __init__(self, coordinator: OvumMiraCoordinator, reg: RegisterDef) -> None:
         super().__init__(coordinator, reg)
+        self._unknown_codes: set[str] = set()
+        codes = SENSOR_ENUM_CODES.get(self._attr_translation_key)
+        if codes is not None:
+            self._attr_device_class = SensorDeviceClass.ENUM
+            self._attr_options = [str(code) for code in codes]
+            return
         native_unit, device_class = _UNIT_DEVICE_CLASS.get(reg.unit, (reg.unit or None, None))
         self._attr_native_unit_of_measurement = native_unit
         self._attr_device_class = device_class
@@ -79,6 +101,9 @@ class OvumMiraSensor(OvumMiraEntity, SensorEntity):
         if isinstance(raw, float) and math.isnan(raw):
             return None
 
+        if self._attr_device_class == SensorDeviceClass.ENUM:
+            return self._enum_state(raw)
+
         if self._reg.scale != 1.0 and isinstance(raw, (int, float)):
             raw = raw * self._reg.scale
 
@@ -93,6 +118,19 @@ class OvumMiraSensor(OvumMiraEntity, SensorEntity):
         if isinstance(raw, bool):
             return "on" if raw else "off"
         return raw
+
+    def _enum_state(self, raw: int | float | bool | str) -> str | None:
+        """Return the raw code as state; undocumented codes become unknown."""
+        code = str(int(raw))
+        if code in self._attr_options:
+            return code
+        if code not in self._unknown_codes:
+            self._unknown_codes.add(code)
+            _LOGGER.warning(
+                "Undocumented code %s for %s (register %d); state set to unknown",
+                code, self._reg.name, self._reg.address,
+            )
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

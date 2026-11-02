@@ -190,5 +190,393 @@
       "cannot_connect": "Cannot connect to MIRA. Check IP address and port.",
       "login_failed": "Connected but Modbus login failed. Check your access level."
     }
+  },
+  "entity": {
+    "binary_sensor": {
+      "biv_kaskhzanf": {
+        "name": "Cascade heating demand"
+      },
+      "biv_kaskkueanf": {
+        "name": "Cascade cooling demand"
+      },
+      "biv_kaskwwanf": {
+        "name": "Cascade hot water demand"
+      },
+      "has_fault": {
+        "name": "Fault"
+      },
+      "wpm_running": {
+        "name": "Heat pump {wpm} compressor running"
+      },
+      "ww_zirkpump": {
+        "name": "Circulation pump"
+      }
+    },
+    "number": {
+      "ems_bat_soc": {
+        "name": "EMS battery SOC"
+      },
+      "ems_grid_power": {
+        "name": "EMS grid power"
+      },
+      "ems_target_power": {
+        "name": "EMS target power"
+      },
+      "ems_wr_power": {
+        "name": "EMS inverter power"
+      },
+      "fws_soll": {
+        "name": "Fresh water setpoint"
+      },
+      "hk_at_heizgrenze": {
+        "name": "Heating circuit {hk} heating limit"
+      },
+      "hk_desiredtemp": {
+        "name": "Heating circuit {hk} flow setpoint"
+      },
+      "hk_fixwert_hz": {
+        "name": "Heating circuit {hk} fixed value heating"
+      },
+      "hk_fixwert_kue": {
+        "name": "Heating circuit {hk} fixed value cooling"
+      },
+      "hk_pv_minus": {
+        "name": "Heating circuit {hk} PV reduction"
+      },
+      "hk_pv_plus": {
+        "name": "Heating circuit {hk} PV raise"
+      },
+      "hk_raumsoll_hz": {
+        "name": "Heating circuit {hk} room setpoint heating"
+      },
+      "hk_raumsoll_kue": {
+        "name": "Heating circuit {hk} room setpoint cooling"
+      },
+      "hk_tvl_urlaub_hz": {
+        "name": "Heating circuit {hk} holiday flow heating"
+      },
+      "hk_tvl_urlaub_kue": {
+        "name": "Heating circuit {hk} holiday flow cooling"
+      },
+      "hpuf_soll_pv": {
+        "name": "Buffer PV setpoint"
+      },
+      "ww_soll": {
+        "name": "Hot water setpoint"
+      },
+      "ww_soll_pv": {
+        "name": "Hot water PV setpoint"
+      }
+    },
+    "select": {
+      "ems_pvstatus": {
+        "name": "EMS PV status"
+      },
+      "hk_fix_mode": {
+        "name": "Heating circuit {hk} setpoint mode"
+      },
+      "hk_mode": {
+        "name": "Heating circuit {hk} mode"
+      },
+      "hk_urlaub": {
+        "name": "Heating circuit {hk} holiday mode"
+      },
+      "ww_switch_on": {
+        "name": "Hot water main switch"
+      }
+    },
+    "sensor": {
+      "aussentemperatur": {
+        "name": "Outdoor temperature"
+      },
+      "biv_kaskhzanf": {
+        "name": "Cascade heating demand"
+      },
+      "biv_kaskkueanf": {
+        "name": "Cascade cooling demand"
+      },
+      "biv_kaskwwanf": {
+        "name": "Cascade hot water demand"
+      },
+      "hk_actualroomtemp": {
+        "name": "Heating circuit {hk} room temperature"
+      },
+      "hk_actualvalue": {
+        "name": "Heating circuit {hk} flow temperature"
+      },
+      "hk_desiredtemp": {
+        "name": "Heating circuit {hk} flow setpoint"
+      },
+      "hk_type": {
+        "name": "Heating circuit {hk} type",
+        "state": {
+          "0": "Not installed",
+          "1": "Unregulated",
+          "2": "Return controlled",
+          "3": "Mixed",
+          "4": "Cube direct"
+        }
+      },
+      "hpuf_ladestatus": {
+        "name": "Buffer charge status",
+        "state": {
+          "0": "Below frost protection",
+          "1": "Below switch-on point",
+          "2": "Below setpoint",
+          "3": "Above setpoint",
+          "4": "Above setpoint + hysteresis",
+          "5": "No buffer configured"
+        }
+      },
+      "hpuf_ladestatus_bms": {
+        "name": "Buffer charge status (BMS)"
+      },
+      "hpuf_puot_bms": {
+        "name": "Buffer temperature top (BMS)"
+      },
+      "hpuf_puut_bms": {
+        "name": "Buffer temperature bottom (BMS)"
+      },
+      "hpuf_solltemp": {
+        "name": "Buffer setpoint (active)"
+      },
+      "hpuf_solltemp_bms": {
+        "name": "Buffer setpoint active (BMS)"
+      },
+      "hpuf_status": {
+        "name": "Buffer mode"
+      },
+      "hsm_error_status": {
+        "name": "HSM error status"
+      },
+      "hsm_errorbits": {
+        "name": "Fault bits"
+      },
+      "hsm_errorcode_1": {
+        "name": "HSM error code 1"
+      },
+      "hsm_errorcode_2": {
+        "name": "HSM error code 2"
+      },
+      "hsm_errorcode_3": {
+        "name": "HSM error code 3"
+      },
+      "hsm_errorcode_4": {
+        "name": "HSM error code 4"
+      },
+      "hsm_lk_a_mode": {
+        "name": "Charging circuit A"
+      },
+      "hsm_lk_b_mode": {
+        "name": "Charging circuit B"
+      },
+      "hsm_lk_c_mode": {
+        "name": "Charging circuit C"
+      },
+      "hsm_lk_d_mode": {
+        "name": "Charging circuit D"
+      },
+      "hsm_pvenable_st2hz": {
+        "name": "PV release backup heater heating"
+      },
+      "hsm_pvenable_st2ww": {
+        "name": "PV release backup heater hot water"
+      },
+      "hsm_pvenable_wphz": {
+        "name": "PV release heat pump heating"
+      },
+      "hsm_pvenable_wpww": {
+        "name": "PV release heat pump hot water"
+      },
+      "hsm_pvstatus_bms": {
+        "name": "PV status (internal)"
+      },
+      "hsm_warningbits": {
+        "name": "Warning bits"
+      },
+      "hsm_warningcode_1": {
+        "name": "HSM warning code 1"
+      },
+      "hsm_warningcode_2": {
+        "name": "HSM warning code 2"
+      },
+      "kpuf_ladestatus": {
+        "name": "Cooling buffer charge status"
+      },
+      "kpuf_ladestatus_bms": {
+        "name": "Cooling buffer charge status (BMS)"
+      },
+      "kpuf_puut": {
+        "name": "Cooling buffer temperature"
+      },
+      "kpuf_puut_bms": {
+        "name": "Cooling buffer temperature (BMS)"
+      },
+      "kpuf_solltemp": {
+        "name": "Cooling buffer setpoint (active)"
+      },
+      "kpuf_solltemp_bms": {
+        "name": "Cooling buffer setpoint active (BMS)"
+      },
+      "puffer_temp_oben": {
+        "name": "Buffer temperature top"
+      },
+      "puffer_temp_unten": {
+        "name": "Buffer temperature bottom"
+      },
+      "sys_kue_puffer": {
+        "name": "Separate cooling buffer"
+      },
+      "sys_puffer": {
+        "name": "Heating buffer",
+        "state": {
+          "0": "None",
+          "1": "Buffer tank",
+          "2": "Cube storage"
+        }
+      },
+      "sys_snrkey": {
+        "name": "Serial number"
+      },
+      "sys_type": {
+        "name": "System name"
+      },
+      "sys_ww": {
+        "name": "Hot water installed",
+        "state": {
+          "0": "No",
+          "1": "Yes"
+        }
+      },
+      "wpm_anfsoll": {
+        "name": "Heat pump {wpm} demand"
+      },
+      "wpm_aufnahmeleistung": {
+        "name": "Heat pump {wpm} power consumption"
+      },
+      "wpm_austrittstemperatur": {
+        "name": "Heat pump {wpm} outlet temperature"
+      },
+      "wpm_betriebsstunden": {
+        "name": "Heat pump {wpm} compressor hours"
+      },
+      "wpm_co_pump": {
+        "name": "Heat pump {wpm} condenser pump speed"
+      },
+      "wpm_compressor_starts": {
+        "name": "Heat pump {wpm} compressor starts"
+      },
+      "wpm_cop": {
+        "name": "Heat pump {wpm} COP"
+      },
+      "wpm_eev_pos": {
+        "name": "Heat pump {wpm} expansion valve position"
+      },
+      "wpm_eintrittstemperatur": {
+        "name": "Heat pump {wpm} inlet temperature"
+      },
+      "wpm_error_status": {
+        "name": "Heat pump {wpm} error status"
+      },
+      "wpm_errorcode_1": {
+        "name": "Heat pump {wpm} error code 1"
+      },
+      "wpm_errorcode_2": {
+        "name": "Heat pump {wpm} error code 2"
+      },
+      "wpm_hgt": {
+        "name": "Heat pump {wpm} hot gas temperature"
+      },
+      "wpm_ko_flow": {
+        "name": "Heat pump {wpm} flow rate"
+      },
+      "wpm_koat": {
+        "name": "Heat pump {wpm} condenser outlet temperature"
+      },
+      "wpm_koet": {
+        "name": "Heat pump {wpm} condenser inlet temperature"
+      },
+      "wpm_rps": {
+        "name": "Heat pump {wpm} compressor speed"
+      },
+      "wpm_sgt": {
+        "name": "Heat pump {wpm} suction gas temperature"
+      },
+      "wpm_status": {
+        "name": "Heat pump {wpm} status",
+        "state": {
+          "0": "Fault",
+          "1": "Inverter offline",
+          "3": "Lockout time",
+          "4": "Oil preheating",
+          "5": "Ready",
+          "6": "Starting",
+          "7": "Hot water",
+          "8": "Heating",
+          "9": "Cooling",
+          "10": "Defrosting",
+          "11": "Manual de-icing",
+          "12": "Stopping",
+          "13": "Below operating limit",
+          "14": "Inverter reset"
+        }
+      },
+      "wpm_sys_snrkey": {
+        "name": "Heat pump {wpm} serial number"
+      },
+      "wpm_sys_type": {
+        "name": "Heat pump {wpm} name"
+      },
+      "wpm_waermeleistung": {
+        "name": "Heat pump {wpm} heat output"
+      },
+      "wpm_warningcode_1": {
+        "name": "Heat pump {wpm} warning code 1"
+      },
+      "wpm_warningcode_2": {
+        "name": "Heat pump {wpm} warning code 2"
+      },
+      "wpm_wpm_status": {
+        "name": "Heat pump {wpm} status (BMS)"
+      },
+      "ww_actualtempo_bms": {
+        "name": "Hot water temperature top (BMS)"
+      },
+      "ww_actualtempu_bms": {
+        "name": "Hot water temperature bottom (BMS)"
+      },
+      "ww_anfstatus": {
+        "name": "Hot water demand"
+      },
+      "ww_anfstatus_bms": {
+        "name": "Hot water demand (BMS)"
+      },
+      "ww_desiredtemp": {
+        "name": "Hot water setpoint (active)"
+      },
+      "ww_fwsstsstatus": {
+        "name": "Fresh water station flow",
+        "state": {
+          "0": "No draw",
+          "1": "Standby flow",
+          "2": "Drawing"
+        }
+      },
+      "ww_temp_oben": {
+        "name": "Hot water temperature top"
+      },
+      "ww_temp_unten": {
+        "name": "Hot water temperature bottom"
+      },
+      "ww_urlaub": {
+        "name": "Hot water holiday mode"
+      },
+      "ww_zirkpump": {
+        "name": "Circulation pump"
+      },
+      "ww_zirkt": {
+        "name": "Circulation temperature"
+      }
+    }
   }
 }
